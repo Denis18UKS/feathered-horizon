@@ -1,6 +1,6 @@
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState, useEffect } from "react";
 import { formatDistance } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Plus } from "lucide-react";
@@ -218,7 +218,11 @@ const Index = () => {
             </span>
           </div>
           {item.link && (
-            <Button variant="outline" asChild>
+            <Button 
+              variant="outline" 
+              asChild
+              className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+            >
               <a href={item.link} target="_blank" rel="noopener noreferrer">
                 Подробнее
               </a>
@@ -237,7 +241,9 @@ const Index = () => {
             <h2 className="text-3xl font-bold">Новости</h2>
             <Dialog>
               <DialogTrigger asChild>
-                <Button>
+                <Button 
+                  className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Добавить новость
                 </Button>
@@ -297,7 +303,11 @@ const Index = () => {
           </div>
           {news.length > 3 && (
             <div className="text-center mt-6">
-              <Button variant="outline" onClick={() => setShowMoreNews(!showMoreNews)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowMoreNews(!showMoreNews)}
+                className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+              >
                 {showMoreNews ? "Скрыть" : "Показать больше"}
               </Button>
             </div>
@@ -309,7 +319,9 @@ const Index = () => {
             <h2 className="text-3xl font-bold">Посты</h2>
             <Dialog>
               <DialogTrigger asChild>
-                <Button>
+                <Button 
+                  className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   Добавить пост
                 </Button>
@@ -361,7 +373,11 @@ const Index = () => {
           </div>
           {posts.length > 3 && (
             <div className="text-center mt-6">
-              <Button variant="outline" onClick={() => setShowMorePosts(!showMorePosts)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowMorePosts(!showMorePosts)}
+                className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+              >
                 {showMorePosts ? "Скрыть" : "Показать больше"}
               </Button>
             </div>
