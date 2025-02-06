@@ -242,10 +242,13 @@ const Index = () => {
             <Dialog>
               <DialogTrigger asChild>
                 <Button 
-                  className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+                  className="group relative overflow-hidden bg-primary hover:bg-primary/90"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Добавить новость
+                  <span className="relative z-10 flex items-center animate-liquid">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Добавить новость
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -304,11 +307,14 @@ const Index = () => {
           {news.length > 3 && (
             <div className="text-center mt-6">
               <Button 
-                variant="outline" 
+                variant="outline"
                 onClick={() => setShowMoreNews(!showMoreNews)}
-                className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+                className="group relative overflow-hidden"
               >
-                {showMoreNews ? "Скрыть" : "Показать больше"}
+                <span className="relative z-10 animate-liquid">
+                  {showMoreNews ? "Скрыть" : "Показать больше"}
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Button>
             </div>
           )}
@@ -320,10 +326,13 @@ const Index = () => {
             <Dialog>
               <DialogTrigger asChild>
                 <Button 
-                  className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+                  className="group relative overflow-hidden bg-primary hover:bg-primary/90"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Добавить пост
+                  <span className="relative z-10 flex items-center animate-liquid">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Добавить пост
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -374,11 +383,14 @@ const Index = () => {
           {posts.length > 3 && (
             <div className="text-center mt-6">
               <Button 
-                variant="outline" 
+                variant="outline"
                 onClick={() => setShowMorePosts(!showMorePosts)}
-                className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
+                className="group relative overflow-hidden"
               >
-                {showMorePosts ? "Скрыть" : "Показать больше"}
+                <span className="relative z-10 animate-liquid">
+                  {showMorePosts ? "Скрыть" : "Показать больше"}
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Button>
             </div>
           )}
