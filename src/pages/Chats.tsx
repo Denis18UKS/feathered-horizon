@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
-import { format } from "date-fns"; // Импортируем только format
+import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
 interface User {
@@ -106,21 +106,27 @@ const Chats = () => {
 
             if (notification.type === 'NEW_MESSAGE') {
                 const message = notification.data;
-                if (message.chat_id !== Number(chatId)) {
-                    toast(`Новое сообщение от ${message.username || 'Неизвестный'}`);
-                    setUnreadMessagesCount(prev => ({
-                        ...prev,
-                        [message.chat_id]: (prev[message.chat_id] || 0) + 1
-                    }));
-                } else {
-                    setMessages(prev => [...prev, message]);
-                    setShowScrollButton(true);
+                // Проверяем, что сообщение не от текущего пользователя
+                if (message.user_id !== currentUser?.id) {
+                    // Если текущий чат не совпадает с чатом сообщения, 
+                    // то увеличиваем счетчик непрочитанных сообщений
+                    if (message.chat_id !== Number(chatId)) {
+                        toast(`Новое сообщение от ${message.username || 'Неизвестный'}`);
+                        setUnreadMessagesCount(prev => ({
+                            ...prev,
+                            [message.chat_id]: (prev[message.chat_id] || 0) + 1
+                        }));
+                    } else {
+                        // Иначе добавляем сообщение в текущий чат
+                        setMessages(prev => [...prev, message]);
+                        setShowScrollButton(true);
+                    }
                 }
             }
         };
 
         return () => socket.close();
-    }, [chatId]);
+    }, [chatId, currentUser?.id]);
 
     const selectChat = (user: User) => {
         if (selectedUser?.id === user.id) return;
