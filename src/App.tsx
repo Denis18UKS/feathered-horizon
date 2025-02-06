@@ -9,6 +9,11 @@ import { AppSidebar } from "./components/AppSidebar";
 import Header from "./components/Header";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Register from "./pages/Register";
+import Login from "./pages/Login";
+import MyProfile from "./pages/MyProfile";
+import EditProfile from "./pages/EditProfile";
+import Chats from "./pages/Chats";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +47,14 @@ const App = () => {
                 <main className="p-4">
                   <Routes>
                     <Route path="/" element={<Index />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+                    <Route path="/profile" element={<MyProfile />} />
+                    <Route path="/profile/edit" element={<EditProfile />} />
+                    <Route path="/chats" element={<Chats />} />
+                    <Route path="/chats/:chatId" element={<Chats />} />
+
+
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>

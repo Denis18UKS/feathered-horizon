@@ -209,7 +209,8 @@ const Index = () => {
         </CardContent>
         <CardFooter className="flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
-            <span>Автор: {item.user}</span>
+            <span>Автор: {item.user}</span> <br></br>
+            <span>{item.created_at}</span><br></br>
             <span className="mx-2">•</span>
             <span>
               {formatDistance(new Date(item.created_at), new Date(), {
@@ -219,8 +220,8 @@ const Index = () => {
             </span>
           </div>
           {item.link && (
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               asChild
               className="relative overflow-hidden transition-all duration-500 before:absolute before:inset-0 before:translate-x-[60%] before:bg-primary/10 before:transition-transform hover:before:translate-x-[-60%] before:rounded-full"
             >

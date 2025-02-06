@@ -20,6 +20,7 @@ interface AppSidebarProps {
 export function AppSidebar({ isAuthenticated, role, onLogout }: AppSidebarProps) {
   const publicItems = [
     { title: "Главная", url: "/", icon: Home },
+    { title: "IT-Хакатоны", url: "/xakatons", icon: Award },
   ];
 
   const authItems = [
@@ -27,7 +28,6 @@ export function AppSidebar({ isAuthenticated, role, onLogout }: AppSidebarProps)
     { title: "Чаты", url: "/chats", icon: MessageSquare },
     { title: "Пользователи", url: "/users", icon: Users },
     { title: "Форум", url: "/forum", icon: MessageCircle },
-    { title: "IT-Хакатоны", url: "/xakatons", icon: Award },
   ];
 
   const adminItems = [
