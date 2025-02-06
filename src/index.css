@@ -99,3 +99,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .liquid-button {
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  .liquid-button path {
+    cursor: pointer;
+  }
+}

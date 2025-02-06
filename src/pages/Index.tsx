@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { LiquidButton } from "@/components/ui/liquid-button";
 
 interface Post {
   id: number;
@@ -241,15 +242,14 @@ const Index = () => {
             <h2 className="text-3xl font-bold">Новости</h2>
             <Dialog>
               <DialogTrigger asChild>
-                <Button 
-                  className="group relative overflow-hidden bg-primary hover:bg-primary/90"
-                >
-                  <span className="relative z-10 flex items-center animate-liquid">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Добавить новость
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Button>
+                <LiquidButton
+                  text="+ Добавить новость"
+                  color1="#9b87f5"
+                  color2="#6E59A5"
+                  color3="#8F17E1"
+                  width={200}
+                  height={50}
+                />
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -306,16 +306,15 @@ const Index = () => {
           </div>
           {news.length > 3 && (
             <div className="text-center mt-6">
-              <Button 
-                variant="outline"
+              <LiquidButton
+                text={showMoreNews ? "Скрыть" : "Показать больше"}
+                color1="#9b87f5"
+                color2="#6E59A5"
+                color3="#8F17E1"
+                width={180}
+                height={40}
                 onClick={() => setShowMoreNews(!showMoreNews)}
-                className="group relative overflow-hidden"
-              >
-                <span className="relative z-10 animate-liquid">
-                  {showMoreNews ? "Скрыть" : "Показать больше"}
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </Button>
+              />
             </div>
           )}
         </section>
@@ -325,15 +324,14 @@ const Index = () => {
             <h2 className="text-3xl font-bold">Посты</h2>
             <Dialog>
               <DialogTrigger asChild>
-                <Button 
-                  className="group relative overflow-hidden bg-primary hover:bg-primary/90"
-                >
-                  <span className="relative z-10 flex items-center animate-liquid">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Добавить пост
-                  </span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/50 to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Button>
+                <LiquidButton
+                  text="+ Добавить пост"
+                  color1="#9b87f5"
+                  color2="#6E59A5"
+                  color3="#8F17E1"
+                  width={200}
+                  height={50}
+                />
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -382,16 +380,15 @@ const Index = () => {
           </div>
           {posts.length > 3 && (
             <div className="text-center mt-6">
-              <Button 
-                variant="outline"
+              <LiquidButton
+                text={showMorePosts ? "Скрыть" : "Показать больше"}
+                color1="#9b87f5"
+                color2="#6E59A5"
+                color3="#8F17E1"
+                width={180}
+                height={40}
                 onClick={() => setShowMorePosts(!showMorePosts)}
-                className="group relative overflow-hidden"
-              >
-                <span className="relative z-10 animate-liquid">
-                  {showMorePosts ? "Скрыть" : "Показать больше"}
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </Button>
+              />
             </div>
           )}
         </section>
