@@ -15,7 +15,6 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showBlockedAlert, setShowBlockedAlert] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [timer, setTimer] = useState(3);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -43,20 +42,13 @@ const Login = () => {
           description: "Добро пожаловать!",
         });
 
-        const countdown = setInterval(() => {
-          setTimer((prevTimer) => {
-            if (prevTimer === 1) {
-              clearInterval(countdown);
-              setIsAuthenticated(true); // Теперь это из контекста
-              if (data.user.role === "admin") {
-                navigate("/admin/users");
-              } else {
-                navigate("/profile");
-              }
-            }
-            return prevTimer - 1;
-          });
-        }, 1000);
+        // После успешного входа сразу перенаправляем пользователя
+        setIsAuthenticated(true); // Это теперь делается через контекст
+        if (data.user.role === "admin") {
+          navigate("/admin/users");
+        } else {
+          navigate("/profile");
+        }
       } else {
         if (data.message === "Ваш аккаунт заблокирован!") {
           setShowBlockedAlert(true);
@@ -141,7 +133,7 @@ const Login = () => {
           <CheckCircle2 className="h-4 w-4" />
           <AlertTitle>Вход успешен</AlertTitle>
           <AlertDescription>
-            Через {timer} секунд вас перенаправит в ваш профиль.
+            Перенаправление в ваш профиль...
           </AlertDescription>
         </Alert>
       )}
