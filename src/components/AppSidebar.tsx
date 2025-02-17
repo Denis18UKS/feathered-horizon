@@ -1,23 +1,11 @@
 import { Home, User, MessageSquare, Users, MessageCircle, Award, Settings, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { useAuth } from "@/pages/AuthContext";  // Импорт контекста
 
-interface AppSidebarProps {
-  isAuthenticated: boolean;
-  role?: string;
-  onLogout: () => void;
-}
+export function AppSidebar() {
+  const { isAuthenticated, role, logout } = useAuth();  // Использование контекста для получения состояния
 
-export function AppSidebar({ isAuthenticated, role, onLogout }: AppSidebarProps) {
   const publicItems = [
     { title: "Главная", url: "/", icon: Home },
     { title: "IT-Хакатоны", url: "/xakatons", icon: Award },
@@ -108,7 +96,7 @@ export function AppSidebar({ isAuthenticated, role, onLogout }: AppSidebarProps)
 
                   <SidebarMenuItem>
                     <SidebarMenuButton
-                      onClick={onLogout}
+                      onClick={logout}
                       className="flex items-center gap-2 text-red-500 hover:text-red-600"
                     >
                       <LogOut className="w-4 h-4" />

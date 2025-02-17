@@ -7,12 +7,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/pages/AuthContext"; // Импортируем useAuth
 
-interface LoginProps {
-  setIsAuthenticated: (value: boolean) => void;
-}
-
-const Login = ({ setIsAuthenticated }: LoginProps) => {
+const Login = () => {
+  const { setIsAuthenticated, login } = useAuth(); // Получаем login из контекста
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showBlockedAlert, setShowBlockedAlert] = useState(false);
@@ -36,9 +34,8 @@ const Login = ({ setIsAuthenticated }: LoginProps) => {
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("userId", data.user.id);
-        localStorage.setItem("role", data.user.role);
+        // Используем метод login из контекста
+        login(data.token, data.user.role);
 
         setShowSuccessAlert(true);
         toast({
@@ -50,7 +47,7 @@ const Login = ({ setIsAuthenticated }: LoginProps) => {
           setTimer((prevTimer) => {
             if (prevTimer === 1) {
               clearInterval(countdown);
-              setIsAuthenticated(true);
+              setIsAuthenticated(true); // Теперь это из контекста
               if (data.user.role === "admin") {
                 navigate("/admin/users");
               } else {
