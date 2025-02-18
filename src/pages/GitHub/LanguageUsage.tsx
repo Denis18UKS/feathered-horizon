@@ -1,18 +1,21 @@
-// LanguageUsage.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+interface LanguageUsageData {
+    [key: string]: number; // Указываем, что каждый язык — это число (количество строк кода)
+}
+
 const LanguageUsage = () => {
     const { repoName } = useParams();
-    const [languages, setLanguages] = useState<any>({});
+    const [languages, setLanguages] = useState<LanguageUsageData>({}); // Типизация для languages
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchLanguages = async () => {
             try {
                 const response = await fetch(`https://api.github.com/repos/${repoName}/languages`);
-                const data = await response.json();
+                const data: LanguageUsageData = await response.json(); // Указываем тип данных для ответа
                 setLanguages(data);
             } catch (error) {
                 console.error('Ошибка загрузки языков', error);
@@ -31,9 +34,10 @@ const LanguageUsage = () => {
     }
 
     const totalLines = Object.values(languages).reduce((acc, lines) => acc + lines, 0);
+
     const languagePercentages = Object.entries(languages).map(([language, lines]) => ({
         language,
-        percentage: ((lines / totalLines) * 100).toFixed(2),
+        percentage: ((lines / totalLines) * 100).toFixed(2), // Здесь lines уже гарантированно число
     }));
 
     return (
