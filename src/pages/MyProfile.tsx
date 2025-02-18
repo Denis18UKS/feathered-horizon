@@ -353,6 +353,7 @@ const MyProfile = () => {
             </div>
           </CardHeader>
 
+
           <CardContent>
             {commits.length === 0 ? (
               <p className="text-muted-foreground">Коммиты отсутствуют</p>
