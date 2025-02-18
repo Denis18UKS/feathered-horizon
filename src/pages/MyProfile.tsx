@@ -22,7 +22,7 @@ interface Commit {
   commit: {
     author: {
       name: string;
-      date: string; // Добавляем это поле
+      date: string;
     };
     message: string;
   };
@@ -41,16 +41,18 @@ const MyProfile = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [filteredRepositories, setFilteredRepositories] = useState<Repository[]>([]);
   const [commits, setCommits] = useState<Commit[]>([]);
-  const [files, setFiles] = useState<FileInfo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<"commits" | "files" | null>(null);
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [graphData, setGraphData] = useState<any[]>([]);
-  const [branches, setBranches] = useState<string[]>([]); // Состояние для веток
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null); // Состояние для выбранной ветки
+  const [branches, setBranches] = useState<string[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string>("");
+
+  const [files, setFiles] = useState<FileInfo[]>([]);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [activeSection, setActiveSection] = useState<"files" | null>(null);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -82,7 +84,7 @@ const MyProfile = () => {
         setUser(data.user);
         setRepositories(data.repositories || []);
         setFilteredRepositories(data.repositories || []);
-        setGraphData(data.graph || []); // Загружаем данные для графика активности
+        setGraphData(data.graph || []);
       } catch (error) {
         toast({
           title: "Ошибка",
@@ -123,14 +125,14 @@ const MyProfile = () => {
     setSelectedBranch(branch);
 
     try {
-      // Запрос на получение коммитов для выбранной ветки
       const response = await fetch(
         `https://api.github.com/repos/${user?.github_username}/${repoName}/commits?sha=${branch}`
       );
       const data = await response.json();
 
-      // Сортируем коммиты по дате (новые сверху)
-      const sortedCommits = Array.isArray(data) ? data.sort((a, b) => new Date(b.commit.author.date).getTime() - new Date(a.commit.author.date).getTime()) : [];
+      const sortedCommits = Array.isArray(data)
+        ? data.sort((a, b) => new Date(b.commit.author.date).getTime() - new Date(a.commit.author.date).getTime())
+        : [];
       setCommits(sortedCommits);
     } catch (error) {
       toast({
@@ -140,13 +142,12 @@ const MyProfile = () => {
       });
     }
 
-    // Запрос на получение веток для выбранного репозитория
     try {
       const branchesResponse = await fetch(
         `https://api.github.com/repos/${user?.github_username}/${repoName}/branches`
       );
       const branchesData = await branchesResponse.json();
-      setBranches(branchesData.map((branch: any) => branch.name)); // Извлекаем имена веток
+      setBranches(branchesData.map((branch: any) => branch.name));
     } catch (error) {
       toast({
         title: "Ошибка",
@@ -155,24 +156,20 @@ const MyProfile = () => {
       });
     }
 
-    // Прокрутка страницы к секции с коммитами
     setTimeout(() => {
       const commitsSection = document.getElementById("commits-section");
       if (commitsSection) {
         commitsSection.scrollIntoView({ behavior: "smooth" });
       }
-    }, 300); // Небольшая задержка, чтобы элементы успели загрузиться
+    }, 300);
   };
 
-
-
-  const fetchFiles = async (repoName: string, path: string = "") => {
+  const fetchFiles = async (repoName: string) => {
     setActiveSection("files");
-    setSelectedRepo(repoName);
 
     try {
       const response = await fetch(
-        `https://api.github.com/repos/${user?.github_username}/${repoName}/contents/${path}`
+        `https://api.github.com/repos/${user?.github_username}/${repoName}/contents/`
       );
       const data = await response.json();
       setFiles(Array.isArray(data) ? data : []);
@@ -242,6 +239,13 @@ const MyProfile = () => {
     fetchFiles(repoName, path);
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -294,145 +298,126 @@ const MyProfile = () => {
             type="text"
             value={searchTerm}
             onChange={handleSearch}
-            placeholder="Поиск репозиториев"
-            className="w-full mt-2 p-2 border border-gray-300 rounded-md"
+            className="w-full p-2 mt-2 border rounded"
+            placeholder="Поиск по репозиториям..."
           />
         </CardHeader>
         <CardContent>
-          {filteredRepositories.length > 0 ? (
-            <div className="grid gap-4">
+          {filteredRepositories.length === 0 ? (
+            <p className="text-muted-foreground">Нет доступных репозиториев</p>
+          ) : (
+            <ul className="space-y-4">
               {filteredRepositories.map((repo) => (
-                <div key={repo.name} className="flex items-center justify-between p-4 rounded-lg border">
+                <li key={repo.name} className="flex justify-between items-center border-b pb-2">
                   <a
                     href={repo.html_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-medium text-blue-500 hover:underline"
+                    className="text-primary hover:underline"
                   >
                     {repo.name}
                   </a>
-
                   <div className="flex space-x-2">
-                    <Button variant="outline" onClick={() => fetchCommits(repo.name)}>
+                    <Button size="sm" onClick={() => fetchCommits(repo.name)}>
                       Коммиты
                     </Button>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" onClick={() => fetchFiles(repo.name)}>
-                        Файлы
-                      </Button>
-                    </div>
-                    <Button variant="outline" onClick={() => handleDownload(repo.name)}>
+                    <Button size="sm" onClick={() => fetchFiles(repo.name)}>
+                      Файлы
+                    </Button>
+                    <Button size="sm" onClick={() => handleDownload(repo.name)} disabled={downloadLoading}>
                       {downloadLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Скачать"}
                     </Button>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground">Репозитории не найдены</p>
+            </ul>
           )}
         </CardContent>
       </Card>
 
-      {activeSection === "commits" && (
-        <div id="commits-section">
-          <Card>
-            <CardHeader>
-              <CardTitle>Коммиты в репозитории {selectedRepo}</CardTitle>
-              <select
-                value={selectedBranch || "main"}
-                onChange={(e) => fetchCommits(selectedRepo, e.target.value)}
-                className="mt-2 w-full p-2 border border-gray-300 rounded-md bg-white"
-              >
-                {branches.map((branch) => (
-                  <option key={branch} value={branch}>
-                    {branch}
-                  </option>
-                ))}
-              </select>
-            </CardHeader>
-            <CardContent>
-              {commits.length > 0 ? (
-                <table className="w-full table-auto border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="border-b px-4 py-2 text-left">Автор</th>
-                      <th className="border-b px-4 py-2 text-left">Сообщение</th>
-                      <th className="border-b px-4 py-2 text-left">Дата</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {commits.map((commit, index) => {
-                      const commitDate = new Date(commit.commit.author.date);
-                      return (
-                        <tr key={index} className="border-b">
-                          <td className="px-4 py-2">{commit.commit.author.name}</td>
-                          <td className="px-4 py-2">{commit.commit.message}</td>
-                          <td className="px-4 py-2">{commitDate.toLocaleString()}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-muted-foreground">Коммиты не найдены</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-
-      {activeSection === "files" && (
-        <Card>
+      {activeSection === "commits" && selectedRepo && (
+        <Card id="commits-section">
           <CardHeader>
-            <CardTitle>Файлы репозитория {selectedRepo}</CardTitle>
-            {currentPath && (
-              <Button variant="outline" onClick={() => fetchFiles(selectedRepo!, "")}>
-                Назад к корню
-              </Button>
-            )}
+            <CardTitle>Коммиты в {selectedRepo}</CardTitle>
+            <div className="overflow-x-auto whitespace-nowrap flex space-x-2 mt-2 pb-2">
+              {branches.map((branch) => (
+                <Button
+                  key={branch}
+                  size="sm"
+                  variant={selectedBranch === branch ? "default" : "outline"}
+                  onClick={() => fetchCommits(selectedRepo, branch)}
+                >
+                  {branch}
+                </Button>
+              ))}
+            </div>
           </CardHeader>
+
           <CardContent>
-            {files.length > 0 ? (
-              <table className="w-full table-auto border-collapse">
-                <thead>
-                  <tr>
-                    <th className="border-b px-4 py-2 text-left">Имя</th>
-                    <th className="border-b px-4 py-2 text-left">Действие</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {files.map((file, index) => (
-                    <tr key={index} className="border-b">
-                      <td className="px-4 py-2">
-                        {file.type === "dir" ? (
-                          <Button variant="ghost" onClick={() => handleFolderClick(selectedRepo!, file.path)}>
-                            📂 {file.name}
-                          </Button>
-                        ) : (
-                          <>📄 {file.name}</>
-                        )}
-                      </td>
-                      <td className="px-4 py-2">
-                        {file.type === "file" && file.download_url && (
-                          <Button variant="outline" onClick={() => handleDownloadFile(file.download_url!, file.name)}>
-                            Скачать
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {commits.length === 0 ? (
+              <p className="text-muted-foreground">Коммиты отсутствуют</p>
             ) : (
-              <p className="text-muted-foreground">Файлы не найдены</p>
+              <ul className="space-y-3">
+                {commits.map((commit, index) => (
+                  <li key={index} className="border-b pb-2">
+                    <p className="font-semibold">{commit.commit.author.name}</p>
+                    <p className="text-muted-foreground text-sm">{commit.commit.message}</p>
+                    <p className="text-xs text-gray-500">{new Date(commit.commit.author.date).toLocaleString()}</p>
+                  </li>
+                ))}
+              </ul>
             )}
           </CardContent>
         </Card>
       )}
+
+      {activeSection === "files" && selectedRepo && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Файлы в {selectedRepo}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {files.length === 0 ? (
+              <p className="text-muted-foreground">Файлы отсутствуют</p>
+            ) : (
+              <ul className="space-y-3">
+                {files.map((file) => (
+                  <li key={file.sha} className="flex justify-between items-center border-b pb-2">
+                    {file.type === "file" ? (
+                      <a
+                        href={file.download_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {file.name}
+                      </a>
+                    ) : (
+                      <button className="text-primary hover:underline" onClick={() => handleFolderClick(selectedRepo, file.path)}>
+                        📁 {file.name}
+                      </button>
+                    )}
+                    {file.type === "file" && (
+                      <Button size="sm" onClick={() => handleDownloadFile(file.download_url || "", file.name)}>
+                        Скачать
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="flex justify-end">
+        <Button onClick={scrollToTop} variant="outline">
+          Наверх
+        </Button>
+      </div>
     </div>
   );
 };
 
 export default MyProfile;
+
