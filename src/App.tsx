@@ -15,6 +15,9 @@ import MyProfile from "./pages/MyProfile";
 import EditProfile from "./pages/EditProfile";
 import Chats from "./pages/Chats";
 import Users from "./pages/Users";
+import Branches from './pages/GitHub/Branches';
+import ActivityGraph from './pages/GitHub/ActivityGraph';
+import LanguageUsage from './pages/GitHub/LanguageUsage';
 import { AuthProvider } from "@/pages/AuthContext";  // Импорт контекста
 
 const queryClient = new QueryClient();
@@ -42,6 +45,9 @@ const App = () => {
                       <Route path="/chats" element={<Chats />} />
                       <Route path="/chats/:chatId" element={<Chats />} />
                       <Route path="/users" element={<Users />} />
+                      <Route path="/repo/:repoName/branches" element={<Branches />} />
+                      <Route path="/repo/:repoName/activity" element={<ActivityGraph />} />
+                      <Route path="/repo/:repoName/languages" element={<LanguageUsage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>

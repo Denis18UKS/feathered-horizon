@@ -2,13 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { Loader2 } from "lucide-react";
 
 interface Repository {
   name: string;
+  html_url: string;
 }
 
 interface User {
@@ -32,17 +32,23 @@ interface FileInfo {
   type: string;
   sha: string;
   download_url?: string;
+  path: string;
 }
 
 const MyProfile = () => {
   const [user, setUser] = useState<User | null>(null);
   const [repositories, setRepositories] = useState<Repository[]>([]);
+  const [filteredRepositories, setFilteredRepositories] = useState<Repository[]>([]);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<"commits" | "files">();
+  const [activeSection, setActiveSection] = useState<"commits" | "files" | null>(null);
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [graphData, setGraphData] = useState<any[]>([]);
+  const [branches, setBranches] = useState<string[]>([]); // Состояние для веток
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null); // Состояние для выбранной ветки
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -72,6 +78,8 @@ const MyProfile = () => {
         const data = await response.json();
         setUser(data.user);
         setRepositories(data.repositories || []);
+        setFilteredRepositories(data.repositories || []);
+        setGraphData(data.graph || []); // Загружаем данные для графика активности
       } catch (error) {
         toast({
           title: "Ошибка",
@@ -96,9 +104,18 @@ const MyProfile = () => {
     navigate("/profile/edit");
   };
 
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const searchValue = event.target.value.toLowerCase();
+    setSearchTerm(searchValue);
+
+    const filteredRepos = repositories.filter((repo) =>
+      repo.name.toLowerCase().includes(searchValue)
+    );
+    setFilteredRepositories(filteredRepos);
+  };
+
   const fetchCommits = async (repoName: string) => {
-    setModalType("commits");
-    setModalOpen(true);
+    setActiveSection("commits");
     setSelectedRepo(repoName);
 
     try {
@@ -114,16 +131,39 @@ const MyProfile = () => {
         variant: "destructive",
       });
     }
+
+    // Загружаем ветки для выбранного репозитория
+    try {
+      const branchesResponse = await fetch(
+        `https://api.github.com/repos/${user?.github_username}/${repoName}/branches`
+      );
+      const branchesData = await branchesResponse.json();
+      setBranches(branchesData.map((branch: any) => branch.name)); // Извлекаем имена веток
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить ветки",
+        variant: "destructive",
+      });
+    }
+
+    // Прокрутка страницы к секции с коммитами
+    setTimeout(() => {
+      const commitsSection = document.getElementById("commits-section");
+      if (commitsSection) {
+        commitsSection.scrollIntoView({ behavior: "smooth" });
+      }
+    }, 300); // Небольшая задержка, чтобы элементы успели загрузиться
   };
 
-  const fetchFiles = async (repoName: string) => {
-    setModalType("files");
-    setModalOpen(true);
+
+  const fetchFiles = async (repoName: string, path: string = "") => {
+    setActiveSection("files");
     setSelectedRepo(repoName);
 
     try {
       const response = await fetch(
-        `https://api.github.com/repos/${user?.github_username}/${repoName}/contents`
+        `https://api.github.com/repos/${user?.github_username}/${repoName}/contents/${path}`
       );
       const data = await response.json();
       setFiles(Array.isArray(data) ? data : []);
@@ -137,6 +177,7 @@ const MyProfile = () => {
   };
 
   const handleDownload = async (repoName: string) => {
+    setDownloadLoading(true);
     try {
       const response = await fetch(
         `http://localhost:5000/github/repos/${user?.github_username}/${repoName}/download`
@@ -159,7 +200,13 @@ const MyProfile = () => {
         description: "Не удалось скачать репозиторий",
         variant: "destructive",
       });
+    } finally {
+      setDownloadLoading(false);
     }
+  };
+
+  const handleFolderClick = (repoName: string, path: string) => {
+    fetchFiles(repoName, path);
   };
 
   if (loading) {
@@ -210,13 +257,28 @@ const MyProfile = () => {
       <Card>
         <CardHeader>
           <CardTitle>Репозитории</CardTitle>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={handleSearch}
+            placeholder="Поиск репозиториев"
+            className="w-full mt-2 p-2 border border-gray-300 rounded-md"
+          />
         </CardHeader>
         <CardContent>
-          {repositories.length > 0 ? (
+          {filteredRepositories.length > 0 ? (
             <div className="grid gap-4">
-              {repositories.map((repo) => (
+              {filteredRepositories.map((repo) => (
                 <div key={repo.name} className="flex items-center justify-between p-4 rounded-lg border">
-                  <span className="font-medium">{repo.name}</span>
+                  <a
+                    href={repo.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-blue-500 hover:underline"
+                  >
+                    {repo.name}
+                  </a>
+
                   <div className="flex space-x-2">
                     <Button variant="outline" onClick={() => fetchCommits(repo.name)}>
                       Коммиты
@@ -225,7 +287,7 @@ const MyProfile = () => {
                       Файлы
                     </Button>
                     <Button variant="outline" onClick={() => handleDownload(repo.name)}>
-                      Скачать
+                      {downloadLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Скачать"}
                     </Button>
                   </div>
                 </div>
@@ -237,46 +299,97 @@ const MyProfile = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {modalType === "commits" ? "Коммиты" : "Файлы"} - {selectedRepo}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
-            {modalType === "commits" && (
-              <div className="space-y-4">
-                {commits.map((commit, index) => (
-                  <div key={index} className="p-4 rounded-lg border">
-                    <p className="font-medium">{commit.commit.author.name}</p>
-                    <p className="text-muted-foreground">{commit.commit.message}</p>
-                  </div>
-                ))}
+      <Card>
+        <CardHeader>
+          <CardTitle>График активности</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col space-y-4">
+            {graphData.map((item, index) => (
+              <div key={index}>
+                <p>Дата: {item.date}</p>
+                <p>Активность: {item.activity}</p>
               </div>
-            )}
-            {modalType === "files" && (
-              <div className="space-y-4">
-                {files.map((file) => (
-                  <div key={file.sha} className="p-4 rounded-lg border flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{file.name}</p>
-                      <p className="text-sm text-muted-foreground">{file.type}</p>
-                    </div>
-                    {file.type === 'file' && file.download_url && (
-                      <Button variant="outline" asChild>
-                        <a href={file.download_url} target="_blank" rel="noopener noreferrer">
-                          Скачать
-                        </a>
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
+
+      {activeSection === "commits" && (
+        <Card id="commits-section">
+          <CardHeader>
+            <CardTitle>Коммиты репозитория {selectedRepo}</CardTitle>
+
+            {/* Выпадающий список веток */}
+            {branches.length > 0 && (
+              <div className="mt-4">
+                <select
+                  value={selectedBranch || ""}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="">Выберите ветку</option>
+                  {branches.map((branch) => (
+                    <option key={branch} value={branch}>
+                      {branch}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </CardHeader>
+          <CardContent>
+            {commits.length > 0 ? (
+              <ul>
+                {commits.map((commit, index) => (
+                  <li key={index} className="py-2 border-b">
+                    <p>{commit.commit.author.name}: {commit.commit.message}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Нет коммитов для отображения</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSection === "files" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Файлы репозитория {selectedRepo}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {files.length > 0 ? (
+              <ul>
+                {files.map((file) => (
+                  <li key={file.sha} className="py-2 border-b">
+                    {file.type === "file" ? (
+                      <a
+                        href={file.download_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        {file.name}
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => handleFolderClick(selectedRepo, file.path)}
+                        className="text-blue-500 hover:underline"
+                      >
+                        {file.name} (папка)
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Нет файлов для отображения</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
