@@ -151,14 +151,12 @@ const Users: React.FC = () => {
                     </span>
                     <div
                         onClick={() => setFilterNoSkills(!filterNoSkills)}
-                        className={`relative inline-block w-12 h-6 transition-all duration-200 rounded-full ${
-                            filterNoSkills ? "bg-blue-500" : "bg-gray-300"
-                        }`}
+                        className={`relative inline-block w-12 h-6 transition-all duration-200 rounded-full ${filterNoSkills ? "bg-blue-500" : "bg-gray-300"
+                            }`}
                     >
                         <span
-                            className={`absolute left-1 top-1 w-4 h-4 transition-all duration-200 rounded-full ${
-                                filterNoSkills ? "translate-x-6 bg-white" : "bg-white"
-                            }`}
+                            className={`absolute left-1 top-1 w-4 h-4 transition-all duration-200 rounded-full ${filterNoSkills ? "translate-x-6 bg-white" : "bg-white"
+                                }`}
                         />
                     </div>
                 </label>
