@@ -57,14 +57,47 @@ const EditProfile = () => {
   }, []);
 
   const handleSave = async () => {
-    // Логика сохранения изменений
-    toast({ title: "Успех", description: "Профиль обновлён" });
-    navigate("/profile");
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast({ title: "Ошибка", description: "Не удалось сохранить профиль, пользователь не авторизован" });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("avatar", avatar as Blob);
+    formData.append("username", username);
+    formData.append("github_username", githubUsername);
+    formData.append("skills", skills);
+    formData.append("email", email);
+
+    try {
+      const response = await fetch("http://localhost:5000/profile/update", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Ошибка при сохранении профиля");
+      }
+
+      toast({ title: "Успех", description: "Профиль обновлён" });
+      navigate("/profile");
+    } catch (error) {
+      toast({ title: "Ошибка", description: error.message });
+    }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setAvatar(e.target.files[0]);
+      const file = e.target.files[0];
+      if (!file.type.startsWith("image/")) {
+        toast({ title: "Ошибка", description: "Пожалуйста, выберите изображение" });
+        return;
+      }
+      setAvatar(file);
     }
   };
 
@@ -88,7 +121,11 @@ const EditProfile = () => {
             <div className="space-y-2">
               <Label className="text-lg font-semibold">Аватар</Label>
               <div className="flex items-center space-x-4">
-                <input type="file" onChange={handleAvatarChange} />
+                <input 
+                  type="file" 
+                  onChange={handleAvatarChange} 
+                  accept="image/*" // Ограничение на выбор изображений
+                />
                 {avatar && (
                   <img
                     src={URL.createObjectURL(avatar)}

@@ -17,6 +17,7 @@ interface User {
     id: number;
     username: string;
     avatar: string;
+    isFriend: boolean;  // Допустим, есть такая метка
 }
 
 interface Message {
@@ -32,7 +33,6 @@ interface Message {
 interface DecodedToken {
     id: number;
     username: string;
-    // другие поля, которые могут быть в токене
 }
 
 const Chats = () => {
@@ -43,7 +43,7 @@ const Chats = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [currentUser, setCurrentUser] = useState<DecodedToken | null>(null); // Corrected type here
+    const [currentUser, setCurrentUser] = useState<DecodedToken | null>(null);
     const [unreadMessagesCount, setUnreadMessagesCount] = useState<{ [key: number]: number }>({});
     const [showScrollButton, setShowScrollButton] = useState(false);
     const navigate = useNavigate();
@@ -58,7 +58,7 @@ const Chats = () => {
             }
 
             try {
-                const decodedToken = jwtDecode<DecodedToken>(token); // Type the decoded token
+                const decodedToken = jwtDecode<DecodedToken>(token);
                 setCurrentUser(decodedToken);
 
                 const response = await fetch('http://localhost:5000/users', {
@@ -66,8 +66,9 @@ const Chats = () => {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
                 const usersData = await response.json();
-                setUsers(usersData.filter((user: User) => user.id !== decodedToken.id));
-                setFilteredUsers(usersData.filter((user: User) => user.id !== decodedToken.id));
+                const friends = usersData.filter((user: User) => user.isFriend); // Фильтрация только друзей
+                setUsers(friends);
+                setFilteredUsers(friends); // Фильтруем только друзей
             } catch (error) {
                 console.error("Ошибка загрузки пользователей:", error);
                 navigate('/login');
@@ -106,10 +107,7 @@ const Chats = () => {
 
             if (notification.type === 'NEW_MESSAGE') {
                 const message = notification.data;
-                // Проверяем, что сообщение не от текущего пользователя
                 if (message.user_id !== currentUser?.id) {
-                    // Если текущий чат не совпадает с чатом сообщения, 
-                    // то увеличиваем счетчик непрочитанных сообщений
                     if (message.chat_id !== Number(chatId)) {
                         toast(`Новое сообщение от ${message.username || 'Неизвестный'}`);
                         setUnreadMessagesCount(prev => ({
@@ -117,7 +115,6 @@ const Chats = () => {
                             [message.chat_id]: (prev[message.chat_id] || 0) + 1
                         }));
                     } else {
-                        // Иначе добавляем сообщение в текущий чат
                         setMessages(prev => [...prev, message]);
                         setShowScrollButton(true);
                     }
@@ -214,7 +211,7 @@ const Chats = () => {
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
-        return date.toLocaleString("ru-RU", { // Используем toLocaleString
+        return date.toLocaleString("ru-RU", {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
@@ -223,17 +220,16 @@ const Chats = () => {
         });
     };
 
-
     if (!currentUser) return <div>Загрузка...</div>;
 
     return (
-        <div className="container mx-auto px-4 py-8"> {/* Контейнер для центрирования */}
+        <div className="container mx-auto px-4 py-8">
             <ToastContainer />
-            <div className="flex space-x-8"> {/* Flexbox для расположения рядом */}
-                <aside className="w-1/4 user-list"> {/* Ширина 1/4 для списка пользователей */}
+            <div className="flex space-x-8">
+                <aside className="w-1/4 user-list">
                     <Card className="w-full">
                         <CardHeader>
-                            <CardTitle>Пользователи</CardTitle>
+                            <CardTitle>Список друзей</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <Input
@@ -244,13 +240,20 @@ const Chats = () => {
                                 className="w-full mb-4"
                             />
                             <ul className="space-y-2">
-                                {filteredUsers.map(user => (
-                                    <li key={user.id} onClick={() => selectChat(user)} className={`p-2 rounded cursor-pointer flex items-center space-x-2 ${selectedUser?.id === user.id ? 'bg-primary/10' : ''}`}>
-                                        <img src={getAvatarUrl(user.avatar)} alt="avatar" className="w-8 h-8 rounded-full" />
-                                        <p>{user.username}</p>
-                                        {unreadMessagesCount[user.id] > 0 && <span className="notification-badge bg-red-500 text-white rounded-full px-2 py-1 text-xs">{unreadMessagesCount[user.id]}</span>}
-                                    </li>
-                                ))}
+                                {filteredUsers.length === 0 ? (
+                                    <li className="p-2 text-center">Нет друзей</li>
+                                ) : (
+                                    filteredUsers.map(user => (
+                                        <li
+                                            key={user.id}
+                                            onClick={() => selectChat(user)}
+                                            className={`p-2 rounded cursor-pointer flex items-center space-x-2 ${selectedUser?.id === user.id ? 'bg-primary/10' : ''}`}
+                                        >
+                                            <img src={getAvatarUrl(user.avatar)} alt="avatar" className="w-8 h-8 rounded-full" />
+                                            <p>{user.username}</p>
+                                        </li>
+                                    ))
+                                )}
                             </ul>
                         </CardContent>
                     </Card>
@@ -259,20 +262,14 @@ const Chats = () => {
                 <main className="w-3/4 chat-box">
                     <Card className="w-full">
                         <CardHeader>
-                            <CardTitle>{selectedUser ? selectedUser.username : 'Выберите пользователя'}</CardTitle>
+                            <CardTitle>{selectedUser ? selectedUser.username : 'Выберите чат'}</CardTitle>
                         </CardHeader>
                         <CardContent className="h-[500px] overflow-y-auto space-y-4">
                             {messages.map(message => (
-                                <div key={message.id} className={`w-full mb-4 rounded-lg p-3 ${message.user_id === currentUser?.id ? 'bg-blue-100 ml-auto text-right' : 'bg-gray-100 mr-auto text-left'}`}> {/* Стилизация под ВК */}
-                                    <div className="text-sm text-gray-500">
-                                        {message.username}
-                                    </div>
-                                    <div className="break-all"> {/* Для переноса длинных слов */}
-                                        {message.message}
-                                    </div>
-                                    <div className="text-xs text-gray-500 mt-1">
-                                        {formatDate(message.created_at)} {/* Форматированная дата */}
-                                    </div>
+                                <div key={message.id} className={`w-full mb-4 rounded-lg p-3 ${message.user_id === currentUser?.id ? 'bg-blue-100 ml-auto text-right' : 'bg-gray-100 mr-auto text-left'}`}>
+                                    <div className="text-sm text-gray-500">{message.username}</div>
+                                    <div className="break-all">{message.message}</div>
+                                    <div className="text-xs text-gray-500 mt-1">{formatDate(message.created_at)}</div>
                                 </div>
                             ))}
                             <div ref={messagesEndRef} />

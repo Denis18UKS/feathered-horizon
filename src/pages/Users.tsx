@@ -144,12 +144,24 @@ const Users: React.FC = () => {
             </div>
 
             <div className="mb-4">
-                <Button
-                    variant={filterNoSkills ? "default" : "outline"}
-                    onClick={() => setFilterNoSkills(!filterNoSkills)}
-                >
-                    {filterNoSkills ? "Показывать пользователей с навыками" : "Исключить пользователей без навыков"}
-                </Button>
+                {/* Toggle button для фильтрации */}
+                <label className="inline-flex items-center cursor-pointer">
+                    <span className="mr-2">
+                        {filterNoSkills ? "Без навыков" : "С навыками"}
+                    </span>
+                    <div
+                        onClick={() => setFilterNoSkills(!filterNoSkills)}
+                        className={`relative inline-block w-12 h-6 transition-all duration-200 rounded-full ${
+                            filterNoSkills ? "bg-blue-500" : "bg-gray-300"
+                        }`}
+                    >
+                        <span
+                            className={`absolute left-1 top-1 w-4 h-4 transition-all duration-200 rounded-full ${
+                                filterNoSkills ? "translate-x-6 bg-white" : "bg-white"
+                            }`}
+                        />
+                    </div>
+                </label>
             </div>
 
             {loading ? (
