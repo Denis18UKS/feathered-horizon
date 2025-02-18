@@ -184,14 +184,13 @@ const Users: React.FC = () => {
                                 Профиль
                             </Button>
                             {/* Кнопка добавления в друзья */}
-                            {user.friendshipStatus === "none" && (
+                            {user.friendshipStatus === "none" ? (
                                 <Button variant="default" className="ml-2" onClick={() => addFriend(user.id)}>
                                     Добавить в друзья
                                 </Button>
-                            )}
-                            {user.friendshipStatus === "pending" && (
+                            ) : user.friendshipStatus === "pending" ? (
                                 <p className="ml-2 text-sm text-muted-foreground">Заявка отправлена</p>
-                            )}
+                            ) : null}
                         </div>
                     ))}
                 </div>
