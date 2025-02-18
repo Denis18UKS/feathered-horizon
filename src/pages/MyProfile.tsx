@@ -22,6 +22,7 @@ interface Commit {
   commit: {
     author: {
       name: string;
+      date: string; // Добавляем это поле
     };
     message: string;
   };
@@ -49,6 +50,8 @@ const MyProfile = () => {
   const [graphData, setGraphData] = useState<any[]>([]);
   const [branches, setBranches] = useState<string[]>([]); // Состояние для веток
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null); // Состояние для выбранной ветки
+  const [currentPath, setCurrentPath] = useState<string>("");
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -114,16 +117,21 @@ const MyProfile = () => {
     setFilteredRepositories(filteredRepos);
   };
 
-  const fetchCommits = async (repoName: string) => {
+  const fetchCommits = async (repoName: string, branch: string | null = "main") => {
     setActiveSection("commits");
     setSelectedRepo(repoName);
+    setSelectedBranch(branch);
 
     try {
+      // Запрос на получение коммитов для выбранной ветки
       const response = await fetch(
-        `https://api.github.com/repos/${user?.github_username}/${repoName}/commits`
+        `https://api.github.com/repos/${user?.github_username}/${repoName}/commits?sha=${branch}`
       );
       const data = await response.json();
-      setCommits(Array.isArray(data) ? data : []);
+
+      // Сортируем коммиты по дате (новые сверху)
+      const sortedCommits = Array.isArray(data) ? data.sort((a, b) => new Date(b.commit.author.date).getTime() - new Date(a.commit.author.date).getTime()) : [];
+      setCommits(sortedCommits);
     } catch (error) {
       toast({
         title: "Ошибка",
@@ -132,7 +140,7 @@ const MyProfile = () => {
       });
     }
 
-    // Загружаем ветки для выбранного репозитория
+    // Запрос на получение веток для выбранного репозитория
     try {
       const branchesResponse = await fetch(
         `https://api.github.com/repos/${user?.github_username}/${repoName}/branches`
@@ -155,6 +163,7 @@ const MyProfile = () => {
       }
     }, 300); // Небольшая задержка, чтобы элементы успели загрузиться
   };
+
 
 
   const fetchFiles = async (repoName: string, path: string = "") => {
@@ -202,6 +211,30 @@ const MyProfile = () => {
       });
     } finally {
       setDownloadLoading(false);
+    }
+  };
+
+  const handleDownloadFile = async (fileUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast({
+        title: "Успех",
+        description: `Файл ${fileName} загружен`,
+      });
+    } catch (error) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось скачать файл",
+        variant: "destructive",
+      });
     }
   };
 
@@ -283,9 +316,11 @@ const MyProfile = () => {
                     <Button variant="outline" onClick={() => fetchCommits(repo.name)}>
                       Коммиты
                     </Button>
-                    <Button variant="outline" onClick={() => fetchFiles(repo.name)}>
-                      Файлы
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" onClick={() => fetchFiles(repo.name)}>
+                        Файлы
+                      </Button>
+                    </div>
                     <Button variant="outline" onClick={() => handleDownload(repo.name)}>
                       {downloadLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Скачать"}
                     </Button>
@@ -294,98 +329,104 @@ const MyProfile = () => {
               ))}
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-8">Нет репозиториев</p>
+            <p className="text-muted-foreground">Репозитории не найдены</p>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>График активности</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col space-y-4">
-            {graphData.map((item, index) => (
-              <div key={index}>
-                <p>Дата: {item.date}</p>
-                <p>Активность: {item.activity}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
       {activeSection === "commits" && (
-        <Card id="commits-section">
-          <CardHeader>
-            <CardTitle>Коммиты репозитория {selectedRepo}</CardTitle>
-
-            {/* Выпадающий список веток */}
-            {branches.length > 0 && (
-              <div className="mt-4">
-                <select
-                  value={selectedBranch || ""}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                >
-                  <option value="">Выберите ветку</option>
-                  {branches.map((branch) => (
-                    <option key={branch} value={branch}>
-                      {branch}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </CardHeader>
-          <CardContent>
-            {commits.length > 0 ? (
-              <ul>
-                {commits.map((commit, index) => (
-                  <li key={index} className="py-2 border-b">
-                    <p>{commit.commit.author.name}: {commit.commit.message}</p>
-                  </li>
+        <div id="commits-section">
+          <Card>
+            <CardHeader>
+              <CardTitle>Коммиты в репозитории {selectedRepo}</CardTitle>
+              <select
+                value={selectedBranch || "main"}
+                onChange={(e) => fetchCommits(selectedRepo, e.target.value)}
+                className="mt-2 w-full p-2 border border-gray-300 rounded-md bg-white"
+              >
+                {branches.map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
                 ))}
-              </ul>
-            ) : (
-              <p>Нет коммитов для отображения</p>
-            )}
-          </CardContent>
-        </Card>
+              </select>
+            </CardHeader>
+            <CardContent>
+              {commits.length > 0 ? (
+                <table className="w-full table-auto border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="border-b px-4 py-2 text-left">Автор</th>
+                      <th className="border-b px-4 py-2 text-left">Сообщение</th>
+                      <th className="border-b px-4 py-2 text-left">Дата</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commits.map((commit, index) => {
+                      const commitDate = new Date(commit.commit.author.date);
+                      return (
+                        <tr key={index} className="border-b">
+                          <td className="px-4 py-2">{commit.commit.author.name}</td>
+                          <td className="px-4 py-2">{commit.commit.message}</td>
+                          <td className="px-4 py-2">{commitDate.toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-muted-foreground">Коммиты не найдены</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
+
 
       {activeSection === "files" && (
         <Card>
           <CardHeader>
             <CardTitle>Файлы репозитория {selectedRepo}</CardTitle>
+            {currentPath && (
+              <Button variant="outline" onClick={() => fetchFiles(selectedRepo!, "")}>
+                Назад к корню
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {files.length > 0 ? (
-              <ul>
-                {files.map((file) => (
-                  <li key={file.sha} className="py-2 border-b">
-                    {file.type === "file" ? (
-                      <a
-                        href={file.download_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline"
-                      >
-                        {file.name}
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => handleFolderClick(selectedRepo, file.path)}
-                        className="text-blue-500 hover:underline"
-                      >
-                        {file.name} (папка)
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <table className="w-full table-auto border-collapse">
+                <thead>
+                  <tr>
+                    <th className="border-b px-4 py-2 text-left">Имя</th>
+                    <th className="border-b px-4 py-2 text-left">Действие</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {files.map((file, index) => (
+                    <tr key={index} className="border-b">
+                      <td className="px-4 py-2">
+                        {file.type === "dir" ? (
+                          <Button variant="ghost" onClick={() => handleFolderClick(selectedRepo!, file.path)}>
+                            📂 {file.name}
+                          </Button>
+                        ) : (
+                          <>📄 {file.name}</>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {file.type === "file" && file.download_url && (
+                          <Button variant="outline" onClick={() => handleDownloadFile(file.download_url!, file.name)}>
+                            Скачать
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : (
-              <p>Нет файлов для отображения</p>
+              <p className="text-muted-foreground">Файлы не найдены</p>
             )}
           </CardContent>
         </Card>
