@@ -54,6 +54,9 @@ const MyProfile = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<"files" | null>(null);
 
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const [friendRequests, setFriendRequests] = useState<User[]>([]);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -99,11 +102,6 @@ const MyProfile = () => {
     fetchUserData();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    navigate("/login");
-  };
 
   const handleEditProfile = () => {
     navigate("/profile/edit");
@@ -164,12 +162,12 @@ const MyProfile = () => {
     }, 300);
   };
 
-  const fetchFiles = async (repoName: string) => {
+  const fetchFiles = async (repoName: string, path: string = "") => {
     setActiveSection("files");
 
     try {
       const response = await fetch(
-        `https://api.github.com/repos/${user?.github_username}/${repoName}/contents/`
+        `https://api.github.com/repos/${user?.github_username}/${repoName}/contents/${path}`
       );
       const data = await response.json();
       setFiles(Array.isArray(data) ? data : []);
@@ -246,6 +244,12 @@ const MyProfile = () => {
     });
   };
 
+
+  const toggleFriendRequests = () => {
+    setShowFriendRequests(!showFriendRequests);
+    if (!showFriendRequests) fetchFriendRequests();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -285,11 +289,16 @@ const MyProfile = () => {
               color3="#8F17E1"
               width={200}
               height={50}
-              onClick={handleEditProfile}
+              onClick={() => navigate("/profile/edit")}
             />
           </div>
+
+          <Button variant="outline" onClick={() => navigate("/friend-requests")}>
+            Заявки в друзья
+          </Button>
         </CardHeader>
       </Card>
+
 
       <Card>
         <CardHeader>

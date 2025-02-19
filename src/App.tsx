@@ -16,9 +16,7 @@ import EditProfile from "./pages/EditProfile";
 import Chats from "./pages/Chats";
 import Users from "./pages/Users";
 import Xakatons from "./pages/Xakatons";
-import Branches from './pages/GitHub/Branches';
-import ActivityGraph from './pages/GitHub/ActivityGraph';
-import LanguageUsage from './pages/GitHub/LanguageUsage';
+import FriendRequests from "./pages/FriendRequests";
 import { AuthProvider } from "@/pages/AuthContext";  // Импорт контекста
 
 const queryClient = new QueryClient();
@@ -47,9 +45,7 @@ const App = () => {
                       <Route path="/chats/:chatId" element={<Chats />} />
                       <Route path="/users" element={<Users />} />
                       <Route path="/xakatons" element={<Xakatons />} />
-                      <Route path="/repo/:repoName/branches" element={<Branches />} />
-                      <Route path="/repo/:repoName/activity" element={<ActivityGraph />} />
-                      <Route path="/repo/:repoName/languages" element={<LanguageUsage />} />
+                      <Route path="/friend-requests" element={<FriendRequests />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>

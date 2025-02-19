@@ -50,7 +50,7 @@ const Chats = () => {
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
-        const fetchUsers = async () => {
+        const fetchFriends = async () => {
             const token = localStorage.getItem("token");
             if (!token) {
                 navigate('/login');
@@ -61,21 +61,20 @@ const Chats = () => {
                 const decodedToken = jwtDecode<DecodedToken>(token);
                 setCurrentUser(decodedToken);
 
-                const response = await fetch('http://localhost:5000/users', {
+                const response = await fetch('http://localhost:5000/friends', {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
-                const usersData = await response.json();
-                const friends = usersData.filter((user: User) => user.isFriend); // Фильтрация только друзей
+                const friends = await response.json();
                 setUsers(friends);
                 setFilteredUsers(friends); // Фильтруем только друзей
             } catch (error) {
-                console.error("Ошибка загрузки пользователей:", error);
+                console.error("Ошибка загрузки друзей:", error);
                 navigate('/login');
             }
         };
 
-        fetchUsers();
+        fetchFriends();
     }, [navigate]);
 
     useEffect(() => {
