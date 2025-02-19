@@ -65,14 +65,18 @@ const Chats = () => {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
+
                 const friends = await response.json();
+                console.log("Полученные друзья:", friends); // ✅ Проверяем, что сервер действительно их возвращает
+
                 setUsers(friends);
-                setFilteredUsers(friends); // Фильтруем только друзей
+                setFilteredUsers(friends);
             } catch (error) {
                 console.error("Ошибка загрузки друзей:", error);
                 navigate('/login');
             }
         };
+
 
         fetchFriends();
     }, [navigate]);

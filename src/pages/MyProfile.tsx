@@ -52,7 +52,7 @@ const MyProfile = () => {
 
   const [files, setFiles] = useState<FileInfo[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<"files" | null>(null);
+  const [activeSection, setActiveSection] = useState<"files" | "commits" | null>(null);
 
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [friendRequests, setFriendRequests] = useState<User[]>([]);
@@ -244,11 +244,6 @@ const MyProfile = () => {
     });
   };
 
-
-  const toggleFriendRequests = () => {
-    setShowFriendRequests(!showFriendRequests);
-    if (!showFriendRequests) fetchFriendRequests();
-  };
 
   if (loading) {
     return (

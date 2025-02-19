@@ -28,6 +28,24 @@ const FriendRequests = () => {
                 console.log("Нет токена!");
                 return;
             }
+            const decodedToken = JSON.parse(atob(token.split('.')[1])); // Раскодировать JWT
+            console.log("Ваш user_id:", decodedToken.user_id);
+
+            const userId = decodedToken.user_id; // Получаем ID из токена
+            const formattedRequests = data
+                .filter(req => req.user_id !== userId) // Исключаем свои заявки
+                .map((req, index) => ({
+                    id: index,
+                    user_id: req.user_id,
+                    friend_id: req.friend_id,
+                    status: req.status,
+                    created_at: req.created_at || "",
+                    friend: {
+                        username: req.friend_name,
+                        avatar: req.avatar || null,
+                    }
+                }));
+
 
             try {
                 const response = await fetch("http://localhost:5000/friend-requests", {
@@ -89,7 +107,7 @@ const FriendRequests = () => {
             toast({
                 title: "Заявка принята",
                 description: "Вы стали друзьями!",
-                variant: "success",
+                variant: "default",
             });
         } catch (error) {
             console.error("Ошибка принятия заявки:", error);
