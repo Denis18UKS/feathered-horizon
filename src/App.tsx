@@ -17,6 +17,7 @@ import Chats from "./pages/Chats";
 import Users from "./pages/Users";
 import Xakatons from "./pages/Xakatons";
 import FriendRequests from "./pages/FriendRequests";
+import Forum from "./pages/Forum";
 import { AuthProvider } from "@/pages/AuthContext";  // Импорт контекста
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => {
                       <Route path="/users" element={<Users />} />
                       <Route path="/xakatons" element={<Xakatons />} />
                       <Route path="/friend-requests" element={<FriendRequests />} />
+                      <Route path="/forum" element={<Forum />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>

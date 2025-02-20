@@ -8,6 +8,7 @@ interface Hackathon {
     title: string;
     description: string;
     image: string;
+    link: string; // Добавлено поле ссылки на страницу хакатона
 }
 
 const HackathonsPage: React.FC = () => {
@@ -18,7 +19,34 @@ const HackathonsPage: React.FC = () => {
     const fetchHackathons = async () => {
         try {
             const response = await axios.get("http://localhost:5000/hackathons");
-            setHackathons(response.data.hackathons);
+            const data = response.data;
+    
+            if (!data || !data.html) {
+                throw new Error("Некорректные данные с сервера");
+            }
+    
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(data.html, 'text/html');
+    
+            const hackathonElements = doc.querySelectorAll('.js-feed-post');
+            const hackathonsArray: Hackathon[] = Array.from(hackathonElements).map((el) => {
+                const titleEl = el.querySelector('.js-feed-post-title') as HTMLElement;
+                const descEl = el.querySelector('.js-feed-post-descr') as HTMLElement;
+                const imageEl = el.querySelector('.t-feed__post-bgimg') as HTMLElement;
+                const linkEl = el.querySelector('.js-feed-post-title a') as HTMLAnchorElement;
+                
+                return {
+                    id: Number(el.getAttribute('data-post-uid')) || 0,
+                    title: titleEl ? titleEl.innerText : "Без названия",
+                    description: descEl ? descEl.innerText : "Описание отсутствует",
+                    image: imageEl?.style.backgroundImage
+                        ? imageEl.style.backgroundImage.slice(5, -2)
+                        : "",
+                    link: linkEl ? linkEl.href : "#" // Добавляем ссылку
+                };
+            });
+    
+            setHackathons(hackathonsArray);
         } catch (err) {
             setError("Ошибка при загрузке хакатонов. Попробуйте позже.");
             console.error("Ошибка парсинга:", err);
@@ -62,9 +90,11 @@ const HackathonsPage: React.FC = () => {
                         <CardContent>
                             <p>{hackathon.description}</p>
                         </CardContent>
-                        <Button className="mt-4" variant="outline">
-                            Подробнее
-                        </Button>
+                        <a href={hackathon.link} target="_blank" rel="noopener noreferrer">
+                            <Button className="mt-4" variant="outline">
+                                Подробнее
+                            </Button>
+                        </a>
                     </Card>
                 ))}
             </div>
