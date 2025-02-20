@@ -25,16 +25,29 @@ const FriendRequests = () => {
         const fetchFriendRequests = async () => {
             const token = localStorage.getItem("token");
             if (!token) {
-                console.log("Нет токена!");
+                console.error("Нет токена!");
                 return;
             }
-            const decodedToken = JSON.parse(atob(token.split('.')[1])); // Раскодировать JWT
-            console.log("Ваш user_id:", decodedToken.user_id);
 
-            const userId = decodedToken.user_id; // Получаем ID из токена
-            const formattedRequests = data
-                .filter(req => req.user_id !== userId) // Исключаем свои заявки
-                .map((req, index) => ({
+            try {
+                const decodedToken = JSON.parse(atob(token.split('.')[1])); // Декодируем JWT
+                console.log("Ваш user_id:", decodedToken.user_id);
+
+                const response = await fetch("http://localhost:5000/friend-requests", {
+                    headers: { "Authorization": `Bearer ${token}` },
+                });
+
+                if (!response.ok) throw new Error(`Ошибка: ${response.status}`);
+
+                const data = await response.json();
+                console.log("Ответ сервера:", data);
+
+                if (!Array.isArray(data)) {
+                    throw new Error("Неверная структура данных");
+                }
+
+                // Формируем список заявок
+                const formattedRequests = data.map((req, index) => ({
                     id: index,
                     user_id: req.user_id,
                     friend_id: req.friend_id,
@@ -43,37 +56,7 @@ const FriendRequests = () => {
                     friend: {
                         username: req.friend_name,
                         avatar: req.avatar || null,
-                    }
-                }));
-
-
-            try {
-                const response = await fetch("http://localhost:5000/friend-requests", {
-                    headers: { "Authorization": `Bearer ${token}` },
-                });
-
-                if (!response.ok) throw new Error(`Ошибка: ${response.status}`);
-
-                const data = await response.json();
-
-                console.log("Ответ сервера:", data); // Логируем ответ
-
-                if (!Array.isArray(data)) {
-                    throw new Error("Неверная структура данных");
-                }
-
-                // Преобразуем данные в ожидаемую структуру
-                const formattedRequests = data.map((req, index) => ({
-                    id: index, // Сервер не возвращает `id`, поэтому временно используем индекс массива
-                    user_id: req.user_id,
-                    friend_id: req.friend_id,
-                    status: req.status,
-                    created_at: "", // Если нет даты, временно оставляем пустым
-                    friend: {
-                        username: req.friend_name, // Используем `friend_name`
-                        avatar: req.avatar || null,
-                        // Если нет аватара, ставим `null`
-                    }
+                    },
                 }));
 
                 setFriendRequests(formattedRequests);
@@ -90,7 +73,6 @@ const FriendRequests = () => {
         fetchFriendRequests();
     }, [toast]);
 
-    // Функция принятия заявки
     const handleAcceptRequest = async (friendId: number) => {
         const token = localStorage.getItem("token");
         if (!token) return;
@@ -173,8 +155,12 @@ const FriendRequests = () => {
                                         <span>{request.friend.username}</span>
                                     </div>
                                     <div className="flex space-x-2">
-                                        <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.friend_id)}>Принять</Button>
-                                        <Button size="sm" variant="outline" onClick={() => handleRejectRequest(request.friend_id)}>Отклонить</Button>
+                                        <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.friend_id)}>
+                                            Принять
+                                        </Button>
+                                        <Button size="sm" variant="outline" onClick={() => handleRejectRequest(request.friend_id)}>
+                                            Отклонить
+                                        </Button>
                                     </div>
                                 </li>
                             ))}
