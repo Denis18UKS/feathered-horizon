@@ -1,191 +1,227 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
-// Интерфейсы
-interface Question {
-    id: number;
-    title: string;
-    description: string;
-    user: string;
-    user_id: number;
-    created_at: string;
-    status: string;
-}
-
-interface Answer {
-    id: number;
-    user: string;
-    answer: string;
-}
-
-const Forum: React.FC = () => {
-    const [questions, setQuestions] = useState<Question[]>([]);
-    const [answers, setAnswers] = useState<Answer[]>([]);
-    const [newQuestion, setNewQuestion] = useState({ title: "", description: "" });
-    const [newAnswer, setNewAnswer] = useState("");
-    const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null);
-
-    const [showModal, setShowModal] = useState(false);
-    const [showAnswerModal, setShowAnswerModal] = useState(false);
+const Forum = () => {
+    const [questions, setQuestions] = useState([]);
+    const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
+    const [showAnswersModal, setShowAnswersModal] = useState(false);
     const [showAddAnswerModal, setShowAddAnswerModal] = useState(false);
+    const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null);
+    const [answers, setAnswers] = useState([]);
+    const [newQuestion, setNewQuestion] = useState({ title: '', description: '' });
+    const [newAnswer, setNewAnswer] = useState('');
+    const { toast } = useToast();
 
-    const modalRef = useRef<HTMLDivElement>(null);
-    const answerModalRef = useRef<HTMLDivElement>(null);
-    const addAnswerModalRef = useRef<HTMLDivElement>(null);
-
-    const userId = localStorage.getItem("userId");
-    const userRole = localStorage.getItem("role");
-    const token = localStorage.getItem("token");
+    const userId = localStorage.getItem('userId');
+    const token = localStorage.getItem('token');
+    const navigate = useNavigate();
+    // Загрузка вопросов с сервера
+    const fetchQuestions = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/forums');
+            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+            const data = await response.json();
+            setQuestions(data);
+        } catch (error) {
+            console.error('Ошибка при загрузке вопросов:', error);
+            toast({ title: "Ошибка", description: "Не удалось загрузить вопросы.", variant: "destructive" });
+        }
+    };
 
     useEffect(() => {
         fetchQuestions();
     }, []);
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (modalRef.current && !modalRef.current.contains(e.target as Node)) setShowModal(false);
-            if (answerModalRef.current && !answerModalRef.current.contains(e.target as Node)) setShowAnswerModal(false);
-            if (addAnswerModalRef.current && !addAnswerModalRef.current.contains(e.target as Node)) setShowAddAnswerModal(false);
-        };
+    // Добавление нового вопроса
+    const addQuestion = async (e: React.FormEvent) => {
+        e.preventDefault();
 
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+        if (!newQuestion.title.trim() || !newQuestion.description.trim()) {
+            toast({ title: "Ошибка", description: "Заполните все поля.", variant: "destructive" });
+            return;
+        }
 
-    const fetchQuestions = async () => {
+        if (!token || !userId) {
+            toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
+            return;
+        }
+
         try {
-            const res = await fetch("http://localhost:5000/forums");
-            const data = await res.json();
-            setQuestions(data);
+            const response = await fetch('http://localhost:5000/forums', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    title: newQuestion.title,
+                    description: newQuestion.description,
+                    user_id: userId,
+                }),
+            });
+
+            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+
+            const newQuestionFromDB = await response.json();
+            setQuestions((prev) => [...prev, newQuestionFromDB]);
+            setShowAddQuestionModal(false);
+            setNewQuestion({ title: '', description: '' });
         } catch (error) {
-            console.error("Ошибка при получении вопросов:", error);
+            console.error('Ошибка при добавлении вопроса:', error);
         }
     };
 
+    // Загрузка ответов к вопросу
     const fetchAnswers = async (questionId: number) => {
         try {
-            const res = await fetch(`http://localhost:5000/forums/${questionId}/answers`);
-            const data = await res.json();
+            const response = await fetch(`http://localhost:5000/forums/${questionId}/answers`);
+            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+            const data = await response.json();
             setAnswers(data);
-            setShowAnswerModal(true);
+            setShowAnswersModal(true);
         } catch (error) {
-            console.error("Ошибка при получении ответов:", error);
+            console.error('Ошибка при загрузке ответов:', error);
         }
     };
 
-    const addQuestion = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!newQuestion.title || !newQuestion.description) return;
-
-        try {
-            const res = await fetch("http://localhost:5000/forums", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ ...newQuestion, user_id: userId }),
-            });
-
-            if (res.ok) {
-                const newQ = await res.json();
-                setQuestions((prev) => [...prev, newQ]);
-                setShowModal(false);
-                setNewQuestion({ title: "", description: "" });
-            }
-        } catch (error) {
-            console.error("Ошибка при добавлении вопроса:", error);
+    // Добавление ответа
+    const addAnswer = async () => {
+        if (!newAnswer.trim()) {
+            toast({ title: "Ошибка", description: "Ответ не может быть пустым.", variant: "destructive" });
+            return;
         }
-    };
 
-    const addAnswer = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!newAnswer || !selectedQuestion) return;
-
-        try {
-            const res = await fetch(`http://localhost:5000/forums/${selectedQuestion}/answers`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ answer: newAnswer, user_id: userId, question_id: selectedQuestion }),
-            });
-
-            if (res.ok) {
-                const newA = await res.json();
-                setAnswers((prev) => [...prev, newA]);
-                setShowAddAnswerModal(false);
-                setNewAnswer("");
-            }
-        } catch (error) {
-            console.error("Ошибка при добавлении ответа:", error);
+        if (!token || !userId) {
+            toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
+            return;
         }
-    };
 
-    const closeQuestion = async (questionId: number) => {
+        if (selectedQuestion === null) {
+            console.error('Ошибка: Не выбран вопрос.');
+            return;
+        }
+
         try {
-            const res = await fetch(`http://localhost:5000/forums/${questionId}/status`, {
-                method: "PUT",
+            const response = await fetch(`http://localhost:5000/forums/${selectedQuestion}/answers`, {
+                method: 'POST',
                 headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
-                body: JSON.stringify({ status: "решён" }),
+                body: JSON.stringify({
+                    answer: newAnswer,
+                    user_id: userId,
+                }),
             });
 
-            if (res.ok) {
-                setQuestions((prev) =>
-                    prev.map((q) => (q.id === questionId ? { ...q, status: "решён" } : q))
-                );
-            }
+            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+
+            const newAnswerFromDB = await response.json();
+            setAnswers((prev) => [...prev, newAnswerFromDB]);
+            setNewAnswer('');
+            setShowAddAnswerModal(false);
         } catch (error) {
-            console.error("Ошибка при закрытии вопроса:", error);
+            console.error('Ошибка при добавлении ответа:', error);
         }
     };
 
     return (
-        <div className="forum-page">
-            <main>
-                <section className="forum">
-                    <h2>Форум</h2>
-                    <p>Задавайте вопросы и делитесь знаниями.</p>
+        <div className="container mx-auto px-4 py-8">
+            <div className="space-y-8">
+                <section>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-3xl font-bold">Форум</h2>
+                        <Button variant="outline" onClick={() => setShowAddQuestionModal(true)}>+ Задать вопрос</Button>
+                    </div>
 
-                    <button className="btn" onClick={() => setShowModal(true)}>
-                        Задать вопрос
-                    </button>
-
-                    <div className="questions">
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {questions.map((q) => (
-                            <article key={q.id} className={`question ${q.status === "решён" ? "resolved" : ""}`}>
-                                <h3>{q.title}</h3>
-                                <p>{q.description}</p>
-                                <p><strong>Автор:</strong> {q.user || "Аноним"}</p>
-                                <p><strong>Дата:</strong> {new Date(q.created_at).toLocaleDateString()}</p>
-                                <p><strong>Статус:</strong> {q.status}</p>
-
-                                <button className="btn" onClick={() => { setSelectedQuestion(q.id); fetchAnswers(q.id); }}>
-                                    Ответы
-                                </button>
-
-                                {q.status !== "решён" && (
-                                    <>
-                                        {String(q.user_id) !== String(userId) && (
-                                            <button className="btn" onClick={() => { setSelectedQuestion(q.id); setShowAddAnswerModal(true); }}>
-                                                Ответить
-                                            </button>
-                                        )}
-                                        {String(q.user_id) === String(userId) && (
-                                            <button className="btn" onClick={() => closeQuestion(q.id)}>
-                                                Закрыть
-                                            </button>
-                                        )}
-                                    </>
-                                )}
-                            </article>
+                            <Card key={q.id} className={`w-full ${q.status === 'решён' ? 'bg-green-100' : ''}`}>
+                                <CardHeader>
+                                    <CardTitle>{q.title}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <CardDescription>{q.description}</CardDescription>
+                                    <p><strong>Пользователь:</strong> {q.user || 'Не указан'}</p>
+                                    <p><strong>Дата:</strong> {new Date(q.created_at).toLocaleDateString()}</p>
+                                    <p><strong>Статус:</strong> {q.status}</p>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button onClick={() => navigate(`/forums/${q.id}/answers`)}>
+                                        Посмотреть ответы
+                                    </Button>
+                                    {q.status !== 'решён' && q.user_id !== userId && (
+                                        <Button onClick={() => { setSelectedQuestion(q.id); setShowAddAnswerModal(true); }}>
+                                            Ответить
+                                        </Button>
+                                    )}
+                                </CardFooter>
+                            </Card>
                         ))}
                     </div>
                 </section>
-            </main>
+            </div>
+
+            {/* Модальное окно для добавления вопроса */}
+            <Dialog open={showAddQuestionModal} onOpenChange={setShowAddQuestionModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Задать вопрос</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={addQuestion}>
+                        <Label>Тема</Label>
+                        <Input value={newQuestion.title} onChange={(e) => setNewQuestion({ ...newQuestion, title: e.target.value })} required />
+                        <Label>Описание</Label>
+                        <Textarea value={newQuestion.description} onChange={(e) => setNewQuestion({ ...newQuestion, description: e.target.value })} required />
+                        <DialogFooter>
+                            <Button type="submit">Отправить</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Модальное окно для добавления ответа */}
+            <Dialog open={showAddAnswerModal} onOpenChange={setShowAddAnswerModal}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Добавить ответ</DialogTitle></DialogHeader>
+                    <Textarea value={newAnswer} onChange={(e) => setNewAnswer(e.target.value)} required />
+                    <DialogFooter>
+                        <Button onClick={addAnswer}>Ответить</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Модальное окно для отображения ответов */}
+            <Dialog open={showAnswersModal} onOpenChange={setShowAnswersModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Ответы</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        {answers.length > 0 ? (
+                            answers.map((answer) => (
+                                <div key={answer.id} className="border p-2 rounded">
+                                    <p>{answer.answer}</p>
+                                    <p className="text-sm text-gray-500">Автор: {answer.user || "Неизвестный"}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <p>Ответов пока нет.</p>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={() => setShowAnswersModal(false)}>Закрыть</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </div>
     );
 };
