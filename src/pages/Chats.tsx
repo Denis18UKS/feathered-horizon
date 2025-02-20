@@ -213,15 +213,13 @@ const Chats = () => {
     };
 
     const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleString("ru-RU", {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
+        return new Date(dateString).toLocaleDateString("ru-RU", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
         });
     };
+
 
     if (!currentUser) return <div>Загрузка...</div>;
 

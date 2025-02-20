@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
+import { format } from "date-fns";
 
 interface Post {
   id: number;
@@ -209,8 +210,8 @@ const Index = () => {
         </CardContent>
         <CardFooter className="flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
-            <span>Автор: {item.user}</span> <br></br>
-            <span>{item.created_at}</span><br></br>
+            <span>Автор: {item.user}</span> <br />
+            {format(new Date(item.created_at), "dd MMMM yyyy, HH:mm", { locale: ru })}
             <span className="mx-2">•</span>
             <span>
               {formatDistance(new Date(item.created_at), new Date(), {
@@ -219,6 +220,7 @@ const Index = () => {
               })}
             </span>
           </div>
+
           {item.link && (
             <Button
               variant="outline"
