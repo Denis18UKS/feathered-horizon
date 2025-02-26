@@ -12,86 +12,37 @@ interface LiquidButtonProps {
   onClick?: () => void;
 }
 
-interface LiquidButtonAnimationOptions {
-  tension?: number;
-  width?: number;
-  height?: number;
-  margin?: number;
-  hoverFactor?: number;
-  gap?: number;
-  debug?: boolean;
-  forceFactor?: number;
-  color1?: string;
-  color2?: string;
-  color3?: string;
-  textColor?: string;
-  text?: string;
-  wrapperElement?: HTMLElement;
-}
-
 class LiquidButtonAnimation {
-  private static idCounter = 1;
-  private readonly id: number;
-  private readonly xmlns: string;
-  private readonly tension: number;
-  private readonly width: number;
-  private readonly height: number;
-  private readonly margin: number;
-  private readonly hoverFactor: number;
-  private readonly gap: number;
-  private readonly debug: boolean;
-  private readonly forceFactor: number;
-  private readonly color1: string;
-  private readonly color2: string;
-  private readonly color3: string;
-  private readonly textColor: string;
-  private readonly text: string;
-  private readonly svg: SVGSVGElement;
-  private readonly layers: Array<{
-    points: Array<any>;
-    viscosity: number;
-    mouseForce: number;
-    forceLimit: number;
-    path?: SVGPathElement;
-  }>;
-  private readonly svgText: SVGTextElement;
-  private readonly svgDefs: SVGDefsElement;
-  private readonly wrapperElement: HTMLElement;
-  private touches: Array<{ x: number; y: number; force: number }>;
-  private noise: number;
-  private __raf: number | null = null;
-
-  constructor(svg: SVGSVGElement) {
-    const options = svg.dataset as unknown as LiquidButtonAnimationOptions;
-    
-    this.id = LiquidButtonAnimation.idCounter++;
+  constructor(svg) {
+    const options = svg.dataset;
+    this.id = this.constructor.id || (this.constructor.id = 1);
+    this.constructor.id++;
     this.xmlns = 'http://www.w3.org/2000/svg';
-    this.tension = options.tension || 0.4;
-    this.width = options.width || 200;
-    this.height = options.height || 50;
-    this.margin = options.margin || 50;
+    this.tension = options.tension * 1 || 0.4;
+    this.width   = options.width   * 1 || 200;
+    this.height  = options.height  * 1 ||  50;
+    this.margin  = options.margin  ||  50;
     this.hoverFactor = options.hoverFactor || -0.1;
-    this.gap = options.gap || 5;
-    this.debug = options.debug || false;
+    this.gap     = options.gap     ||   5;
+    this.debug   = options.debug   || false;
     this.forceFactor = options.forceFactor || 0.2;
     this.color1 = options.color1 || '#36DFE7';
     this.color2 = options.color2 || '#8F17E1';
     this.color3 = options.color3 || '#BF09E6';
     this.textColor = options.textColor || '#FFFFFF';
-    this.text = options.text || '▶';
+    this.text = options.text    || '▶';
     this.svg = svg;
     this.layers = [{
       points: [],
       viscosity: 0.5,
       mouseForce: 100,
       forceLimit: 2,
-    }, {
+    },{
       points: [],
       viscosity: 0.8,
       mouseForce: 150,
       forceLimit: 3,
     }];
-    
     for (let layerIndex = 0; layerIndex < this.layers.length; layerIndex++) {
       const layer = this.layers[layerIndex];
       layer.viscosity = options['layer-' + (layerIndex + 1) + 'Viscosity'] * 1 || layer.viscosity;
@@ -100,7 +51,6 @@ class LiquidButtonAnimation {
       layer.path = document.createElementNS(this.xmlns, 'path');
       this.svg.appendChild(layer.path);
     }
-    
     this.wrapperElement = options.wrapperElement || document.body;
     if (!this.svg.parentElement) {
       this.wrapperElement.append(this.svg);
@@ -109,19 +59,18 @@ class LiquidButtonAnimation {
     this.svgText = document.createElementNS(this.xmlns, 'text');
     this.svgText.setAttribute('x', '50%');
     this.svgText.setAttribute('y', '50%');
-    this.svgText.setAttribute('dy', `${~~(this.height / 8)}px`);
-    this.svgText.setAttribute('font-size', `${~~(this.height / 3)}`);
+    this.svgText.setAttribute('dy', ~~(this.height / 8) + 'px');
+    this.svgText.setAttribute('font-size', ~~(this.height / 3));
     this.svgText.style.fontFamily = 'sans-serif';
     this.svgText.setAttribute('text-anchor', 'middle');
     this.svgText.setAttribute('pointer-events', 'none');
     this.svg.appendChild(this.svgText);
 
-    this.svgDefs = document.createElementNS(this.xmlns, 'defs');
+    this.svgDefs = document.createElementNS(this.xmlns, 'defs')
     this.svg.appendChild(this.svgDefs);
 
     this.touches = [];
-    this.noise = options.debug ? 0 : 0.2;
-
+    this.noise = options.noise || 0;
     document.body.addEventListener('touchstart', this.touchHandler);
     document.body.addEventListener('touchmove', this.touchHandler);
     document.body.addEventListener('touchend', this.clearHandler);
@@ -351,18 +300,17 @@ class LiquidButtonAnimation {
       layer.points = points;
     }
   }
+}
 
-  destroy() {
-    if (this.__raf) {
-      cancelAnimationFrame(this.__raf);
-    }
-    document.body.removeEventListener('touchstart', this.touchHandler);
-    document.body.removeEventListener('touchmove', this.touchHandler);
-    document.body.removeEventListener('touchend', this.clearHandler);
-    document.body.removeEventListener('touchcancel', this.clearHandler);
-    this.svg.removeEventListener('mousemove', this.mouseHandler);
-    this.svg.removeEventListener('mouseout', this.clearHandler);
-  }
+
+const redraw = () => {
+  button.initOrigins();
+};
+
+const buttons = document.getElementsByClassName('liquid-button');
+for (let buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
+  const button = buttons[buttonIndex];
+  button.liquidButton = new LiquidButton(button);
 }
 
 export const LiquidButton: React.FC<LiquidButtonProps> = ({
@@ -377,7 +325,7 @@ export const LiquidButton: React.FC<LiquidButtonProps> = ({
   onClick
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const buttonRef = useRef<LiquidButtonAnimation | null>(null);
+  const buttonRef = useRef<any>(null);
 
   useEffect(() => {
     if (svgRef.current) {
@@ -394,9 +342,7 @@ export const LiquidButton: React.FC<LiquidButtonProps> = ({
     }
 
     return () => {
-      if (buttonRef.current) {
-        buttonRef.current.destroy();
-      }
+      // Cleanup if needed
     };
   }, [text, width, height, color1, color2, color3, textColor]);
 
