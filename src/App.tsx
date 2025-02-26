@@ -1,4 +1,4 @@
-// App.tsx
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -19,7 +19,10 @@ import Xakatons from "./pages/Xakatons";
 import FriendRequests from "./pages/FriendRequests";
 import Forum from "./pages/Forum";
 import Answers from './pages/Answers';
-import { AuthProvider } from "@/pages/AuthContext";  // Импорт контекста
+import AdminUsers from './pages/AdminUsers';
+import Moderation from './pages/admin/Moderation';
+import Statistics from './pages/admin/Statistics';
+import { AuthProvider } from "@/pages/AuthContext";
 
 const queryClient = new QueryClient();
 
@@ -40,7 +43,7 @@ const App = () => {
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/register" element={<Register />} />
-                      <Route path="/login" element={<Login />} /> {/* Без передачи setIsAuthenticated */}
+                      <Route path="/login" element={<Login />} />
                       <Route path="/profile" element={<MyProfile />} />
                       <Route path="/profile/edit" element={<EditProfile />} />
                       <Route path="/chats" element={<Chats />} />
@@ -50,6 +53,9 @@ const App = () => {
                       <Route path="/friend-requests" element={<FriendRequests />} />
                       <Route path="/forum" element={<Forum />} />
                       <Route path="/forums/:id/answers" element={<Answers />} />
+                      <Route path="/admin/users" element={<AdminUsers />} />
+                      <Route path="/admin/moderation" element={<Moderation />} />
+                      <Route path="/admin/statistics" element={<Statistics />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </main>
