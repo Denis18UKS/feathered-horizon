@@ -12,6 +12,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 ChartJS.register(
   CategoryScale,
@@ -24,9 +25,13 @@ ChartJS.register(
 );
 
 const Statistics = () => {
+  const isMobile = useIsMobile();
+
   // Моковые данные для графика
   const data = {
-    labels: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь'],
+    labels: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь'].map(
+      month => isMobile ? month.slice(0, 3) : month
+    ),
     datasets: [
       {
         label: 'Новые пользователи',
@@ -39,55 +44,83 @@ const Statistics = () => {
 
   const options = {
     responsive: true,
+    maintainAspectRatio: true,
     plugins: {
       legend: {
         position: 'top' as const,
+        labels: {
+          font: {
+            size: isMobile ? 12 : 14
+          }
+        }
       },
       title: {
         display: true,
-        text: 'Статистика роста пользователей'
+        text: 'Статистика роста пользователей',
+        font: {
+          size: isMobile ? 14 : 16
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          font: {
+            size: isMobile ? 10 : 12
+          }
+        }
+      },
+      x: {
+        ticks: {
+          font: {
+            size: isMobile ? 10 : 12
+          }
+        }
       }
     }
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-6">Статистика</h1>
-      <div className="grid gap-6">
-        <Card>
+    <div className="container mx-auto py-4 md:py-8 px-2 md:px-4">
+      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Статистика</h1>
+      <div className="grid gap-4 md:gap-6">
+        <Card className="w-full overflow-hidden">
           <CardHeader>
-            <CardTitle>Рост пользователей</CardTitle>
+            <CardTitle className="text-lg md:text-xl">Рост пользователей</CardTitle>
           </CardHeader>
           <CardContent>
-            <Line data={data} options={options} />
+            <div className="h-[300px] md:h-[400px]">
+              <Line data={data} options={options} />
+            </div>
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>Всего пользователей</CardTitle>
+              <CardTitle className="text-base md:text-lg">Всего пользователей</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold">1,234</p>
+              <p className="text-2xl md:text-4xl font-bold">1,234</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Активных сегодня</CardTitle>
+              <CardTitle className="text-base md:text-lg">Активных сегодня</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold">156</p>
+              <p className="text-2xl md:text-4xl font-bold">156</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="sm:col-span-2 md:col-span-1">
             <CardHeader>
-              <CardTitle>Новых за неделю</CardTitle>
+              <CardTitle className="text-base md:text-lg">Новых за неделю</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold">45</p>
+              <p className="text-2xl md:text-4xl font-bold">45</p>
             </CardContent>
           </Card>
         </div>

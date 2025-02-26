@@ -17,6 +17,7 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface User {
   id: string;
@@ -31,6 +32,7 @@ interface User {
 export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -61,22 +63,24 @@ export default function AdminUsers() {
       accessorKey: "email",
       header: "Email",
     },
-    {
-      accessorKey: "ip_address",
-      header: "IP адрес",
-    },
-    {
-      accessorKey: "location",
-      header: "Местоположение",
-    },
-    {
-      accessorKey: "created_at",
-      header: "Дата регистрации",
-    },
-    {
-      accessorKey: "last_login",
-      header: "Последний вход",
-    },
+    ...(!isMobile ? [
+      {
+        accessorKey: "ip_address",
+        header: "IP адрес",
+      },
+      {
+        accessorKey: "location",
+        header: "Местоположение",
+      },
+      {
+        accessorKey: "created_at",
+        header: "Дата регистрации",
+      },
+      {
+        accessorKey: "last_login",
+        header: "Последний вход",
+      },
+    ] : []),
   ];
 
   const table = useReactTable({
@@ -92,53 +96,57 @@ export default function AdminUsers() {
   });
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          Предыдущая
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          Следующая
-        </Button>
+    <div className="w-full overflow-x-auto">
+      <div className="container mx-auto py-4 md:py-8">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+            className="text-xs md:text-sm"
+          >
+            Предыдущая
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+            className="text-xs md:text-sm"
+          >
+            Следующая
+          </Button>
+        </div>
       </div>
     </div>
   );

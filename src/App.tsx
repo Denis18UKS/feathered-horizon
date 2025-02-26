@@ -23,6 +23,7 @@ import AdminUsers from './pages/AdminUsers';
 import Moderation from './pages/admin/Moderation';
 import Statistics from './pages/admin/Statistics';
 import { AuthProvider } from "@/pages/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const queryClient = new QueryClient();
 
@@ -35,11 +36,11 @@ const App = () => {
         <AuthProvider>
           <BrowserRouter>
             <SidebarProvider>
-              <div className="min-h-screen flex w-full">
+              <div className="min-h-screen flex w-full flex-col md:flex-row">
                 <AppSidebar />
-                <div className="flex-1">
+                <div className="flex-1 flex flex-col min-h-screen">
                   <Header />
-                  <main className="p-4">
+                  <main className="flex-1 p-2 md:p-4 overflow-auto">
                     <Routes>
                       <Route path="/" element={<Index />} />
                       <Route path="/register" element={<Register />} />
