@@ -1,10 +1,13 @@
+
 import { Home, User, MessageSquare, Users, MessageCircle, Award, Settings, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
-import { useAuth } from "@/pages/AuthContext";  // Импорт контекста
+import { useAuth } from "@/pages/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function AppSidebar() {
-  const { isAuthenticated, role, logout } = useAuth();  // Использование контекста для получения состояния
+  const { isAuthenticated, role, logout } = useAuth();
+  const isMobile = useIsMobile();
 
   const publicItems = [
     { title: "Главная", url: "/", icon: Home },
@@ -25,9 +28,9 @@ export function AppSidebar() {
   ];
 
   return (
-    <Sidebar className="border-r border-gray-200 animate-sidebar-slide-in">
+    <Sidebar className="border-r border-gray-200">
       <SidebarContent>
-        <div className="p-4">
+        <div className="p-4 md:p-6">
           <h1 className="text-2xl font-bold text-primary">IT-BIRD</h1>
         </div>
 
@@ -38,9 +41,9 @@ export function AppSidebar() {
               {publicItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <Link to={item.url} className="flex items-center gap-2">
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
+                    <Link to={item.url} className="flex items-center gap-3 px-2 py-2">
+                      <item.icon className="w-5 h-5" />
+                      <span className="text-sm">{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -50,17 +53,17 @@ export function AppSidebar() {
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <Link to="/register" className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <span>Регистрация</span>
+                      <Link to="/register" className="flex items-center gap-3 px-2 py-2">
+                        <User className="w-5 h-5" />
+                        <span className="text-sm">Регистрация</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <Link to="/login" className="flex items-center gap-2">
-                        <LogOut className="w-4 h-4" />
-                        <span>Вход</span>
+                      <Link to="/login" className="flex items-center gap-3 px-2 py-2">
+                        <LogOut className="w-5 h-5" />
+                        <span className="text-sm">Вход</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -70,9 +73,9 @@ export function AppSidebar() {
                   {authItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <Link to={item.url} className="flex items-center gap-2">
-                          <item.icon className="w-4 h-4" />
-                          <span>{item.title}</span>
+                        <Link to={item.url} className="flex items-center gap-3 px-2 py-2">
+                          <item.icon className="w-5 h-5" />
+                          <span className="text-sm">{item.title}</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -84,9 +87,9 @@ export function AppSidebar() {
                       {adminItems.map((item) => (
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton asChild>
-                            <Link to={item.url} className="flex items-center gap-2">
-                              <item.icon className="w-4 h-4" />
-                              <span>{item.title}</span>
+                            <Link to={item.url} className="flex items-center gap-3 px-2 py-2">
+                              <item.icon className="w-5 h-5" />
+                              <span className="text-sm">{item.title}</span>
                             </Link>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -97,10 +100,10 @@ export function AppSidebar() {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       onClick={logout}
-                      className="flex items-center gap-2 text-red-500 hover:text-red-600"
+                      className="flex items-center gap-3 px-2 py-2 w-full text-left text-red-500 hover:text-red-600"
                     >
-                      <LogOut className="w-4 h-4" />
-                      <span>Выйти</span>
+                      <LogOut className="w-5 h-5" />
+                      <span className="text-sm">Выйти</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
