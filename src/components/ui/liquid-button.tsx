@@ -1,4 +1,7 @@
+
 import React, { useEffect, useRef } from 'react';
+import { Button } from './button';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface LiquidButtonProps {
   text?: string;
@@ -326,9 +329,10 @@ export const LiquidButton: React.FC<LiquidButtonProps> = ({
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const buttonRef = useRef<any>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    if (svgRef.current) {
+    if (svgRef.current && !isMobile) {
       const svg = svgRef.current;
       svg.dataset.width = width.toString();
       svg.dataset.height = height.toString();
@@ -344,7 +348,24 @@ export const LiquidButton: React.FC<LiquidButtonProps> = ({
     return () => {
       // Cleanup if needed
     };
-  }, [text, width, height, color1, color2, color3, textColor]);
+  }, [text, width, height, color1, color2, color3, textColor, isMobile]);
+
+  if (isMobile) {
+    return (
+      <Button 
+        onClick={onClick}
+        className={className}
+        style={{
+          background: color2,
+          color: textColor,
+          width: width ? `${width}px` : undefined,
+          height: height ? `${height}px` : undefined,
+        }}
+      >
+        {text}
+      </Button>
+    );
+  }
 
   return (
     <svg
