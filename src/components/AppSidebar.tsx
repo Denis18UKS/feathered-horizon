@@ -28,7 +28,7 @@ export function AppSidebar() {
   ];
 
   return (
-    <Sidebar className="border-r border-gray-200">
+    <Sidebar className={`border-r border-gray-200 ${isMobile ? 'bg-background' : ''}`}>
       <SidebarContent>
         <div className="p-4 md:p-6">
           <h1 className="text-2xl font-bold text-primary">IT-BIRD</h1>
