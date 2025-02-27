@@ -1,39 +1,51 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Button } from './button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+interface LiquidButtonProps {
+  text?: string;
+  width?: number;
+  height?: number;
+  color1?: string;
+  color2?: string;
+  color3?: string;
+  textColor?: string;
+  className?: string;
+  onClick?: () => void;
+}
+
 class LiquidButtonAnimation {
   constructor(svg) {
     const options = svg.dataset;
-    this.id = LiquidButtonAnimation.idCounter || (LiquidButtonAnimation.idCounter = 1);
-    LiquidButtonAnimation.idCounter++;
+    this.id = this.constructor.id || (this.constructor.id = 1);
+    this.constructor.id++;
     this.xmlns = 'http://www.w3.org/2000/svg';
     this.tension = options.tension * 1 || 0.4;
-    this.width = options.width * 1 || 200;
-    this.height = options.height * 1 || 50;
-    this.margin = options.margin || 50;
+    this.width   = options.width   * 1 || 200;
+    this.height  = options.height  * 1 ||  50;
+    this.margin  = options.margin  ||  50;
     this.hoverFactor = options.hoverFactor || -0.1;
-    this.gap = options.gap || 5;
-    this.debug = options.debug || false;
+    this.gap     = options.gap     ||   5;
+    this.debug   = options.debug   || false;
     this.forceFactor = options.forceFactor || 0.2;
     this.color1 = options.color1 || '#36DFE7';
     this.color2 = options.color2 || '#8F17E1';
     this.color3 = options.color3 || '#BF09E6';
     this.textColor = options.textColor || '#FFFFFF';
-    this.text = options.text || '▶';
+    this.text = options.text    || '▶';
     this.svg = svg;
     this.layers = [{
       points: [],
       viscosity: 0.5,
       mouseForce: 100,
       forceLimit: 2,
-    }, {
+    },{
       points: [],
       viscosity: 0.8,
       mouseForce: 150,
       forceLimit: 3,
     }];
-
     for (let layerIndex = 0; layerIndex < this.layers.length; layerIndex++) {
       const layer = this.layers[layerIndex];
       layer.viscosity = options['layer-' + (layerIndex + 1) + 'Viscosity'] * 1 || layer.viscosity;
@@ -42,7 +54,6 @@ class LiquidButtonAnimation {
       layer.path = document.createElementNS(this.xmlns, 'path');
       this.svg.appendChild(layer.path);
     }
-
     this.wrapperElement = options.wrapperElement || document.body;
     if (!this.svg.parentElement) {
       this.wrapperElement.append(this.svg);
@@ -51,56 +62,58 @@ class LiquidButtonAnimation {
     this.svgText = document.createElementNS(this.xmlns, 'text');
     this.svgText.setAttribute('x', '50%');
     this.svgText.setAttribute('y', '50%');
-    this.svgText.setAttribute('dy', `${~~(this.height / 8)}px`);
-    this.svgText.setAttribute('font-size', `${~~(this.height / 3)}`);
+    this.svgText.setAttribute('dy', ~~(this.height / 8) + 'px');
+    this.svgText.setAttribute('font-size', ~~(this.height / 3));
     this.svgText.style.fontFamily = 'sans-serif';
     this.svgText.setAttribute('text-anchor', 'middle');
     this.svgText.setAttribute('pointer-events', 'none');
     this.svg.appendChild(this.svgText);
 
-    this.svgDefs = document.createElementNS(this.xmlns, 'defs');
+    this.svgDefs = document.createElementNS(this.xmlns, 'defs')
     this.svg.appendChild(this.svgDefs);
 
     this.touches = [];
-    this.noise = options.debug ? 0 : 0.2;
-    
-    this.bindEvents();
-    this.initOrigins();
-    this.animate();
-  }
-
-  bindEvents() {
+    this.noise = options.noise || 0;
     document.body.addEventListener('touchstart', this.touchHandler);
     document.body.addEventListener('touchmove', this.touchHandler);
     document.body.addEventListener('touchend', this.clearHandler);
     document.body.addEventListener('touchcancel', this.clearHandler);
     this.svg.addEventListener('mousemove', this.mouseHandler);
     this.svg.addEventListener('mouseout', this.clearHandler);
+    this.initOrigins();
+    this.animate();
   }
 
-  mouseHandler = (e) => {
-    this.touches = [{
-      x: e.offsetX,
-      y: e.offsetY,
-      force: 1,
-    }];
+  get mouseHandler() {
+    return (e) => {
+      this.touches = [{
+        x: e.offsetX,
+        y: e.offsetY,
+        force: 1,
+      }];
+    };
   }
 
-  touchHandler = (e) => {
-    this.touches = [];
-    const rect = this.svg.getBoundingClientRect();
-    for (let touchIndex = 0; touchIndex < e.changedTouches.length; touchIndex++) {
-      const touch = e.changedTouches[touchIndex];
-      const x = touch.pageX - rect.left;
-      const y = touch.pageY - rect.top;
-      if (x > 0 && y > 0 && x < this.width && y < this.height) {
-        this.touches.push({x, y, force: touch.force || 1});
+  get touchHandler() {
+    return (e) => {
+      this.touches = [];
+      const rect = this.svg.getBoundingClientRect();
+      for (let touchIndex = 0; touchIndex < e.changedTouches.length; touchIndex++) {
+        const touch = e.changedTouches[touchIndex];
+        const x = touch.pageX - rect.left;
+        const y = touch.pageY - rect.top;
+        if (x > 0 && y > 0 && x < this.svgWidth && y < this.svgHeight) {
+          this.touches.push({x, y, force: touch.force || 1});
+        }
       }
-    }
+      e.preventDefault();
+    };
   }
 
-  clearHandler = () => {
-    this.touches = [];
+  get clearHandler() {
+    return (e) => {
+      this.touches = [];
+    };
   }
 
   get raf() {
@@ -290,19 +303,20 @@ class LiquidButtonAnimation {
       layer.points = points;
     }
   }
-
-  destroy() {
-    document.body.removeEventListener('touchstart', this.touchHandler);
-    document.body.removeEventListener('touchmove', this.touchHandler);
-    document.body.removeEventListener('touchend', this.clearHandler);
-    document.body.removeEventListener('touchcancel', this.clearHandler);
-    this.svg.removeEventListener('mousemove', this.mouseHandler);
-    this.svg.removeEventListener('mouseout', this.clearHandler);
-    cancelAnimationFrame(this.__raf);
-  }
 }
 
-export const LiquidButton = ({
+
+const redraw = () => {
+  button.initOrigins();
+};
+
+const buttons = document.getElementsByClassName('liquid-button');
+for (let buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
+  const button = buttons[buttonIndex];
+  button.liquidButton = new LiquidButton(button);
+}
+
+export const LiquidButton: React.FC<LiquidButtonProps> = ({
   text = "Click me",
   width = 200,
   height = 50,
@@ -313,8 +327,8 @@ export const LiquidButton = ({
   className = '',
   onClick
 }) => {
-  const svgRef = useRef(null);
-  const buttonRef = useRef(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const buttonRef = useRef<any>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -332,9 +346,7 @@ export const LiquidButton = ({
     }
 
     return () => {
-      if (buttonRef.current) {
-        buttonRef.current.destroy();
-      }
+      // Cleanup if needed
     };
   }, [text, width, height, color1, color2, color3, textColor, isMobile]);
 
