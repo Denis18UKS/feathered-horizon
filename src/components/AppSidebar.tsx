@@ -1,6 +1,6 @@
 
-import { Home, User, MessageSquare, Users, MessageCircle, Award, Settings, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Home, User, MessageSquare, Users, MessageCircle, Award, Settings, LogOut, UserPlus } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { useAuth } from "@/pages/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 export function AppSidebar() {
   const { isAuthenticated, role, logout } = useAuth();
   const isMobile = useIsMobile();
+  const location = useLocation();
 
   const publicItems = [
     { title: "Главная", url: "/", icon: Home },
@@ -18,6 +19,7 @@ export function AppSidebar() {
     { title: "Мой Профиль", url: "/profile", icon: User },
     { title: "Чаты", url: "/chats", icon: MessageSquare },
     { title: "Пользователи", url: "/users", icon: Users },
+    { title: "Заявки в друзья", url: "/friend-requests", icon: UserPlus },
     { title: "Форум", url: "/forum", icon: MessageCircle },
   ];
 
@@ -28,7 +30,7 @@ export function AppSidebar() {
   ];
 
   return (
-    <Sidebar className="border-r border-gray-200">
+    <Sidebar className={`border-r border-gray-200 ${isMobile ? "bg-background" : ""}`}>
       <SidebarContent>
         <div className="p-4 md:p-6">
           <h1 className="text-2xl font-bold text-primary">IT-BIRD</h1>
@@ -41,7 +43,7 @@ export function AppSidebar() {
               {publicItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <Link to={item.url} className="flex items-center gap-3 px-2 py-2">
+                    <Link to={item.url} className={`flex items-center gap-3 px-2 py-2 ${location.pathname === item.url ? "bg-secondary/50 text-secondary-foreground" : ""}`}>
                       <item.icon className="w-5 h-5" />
                       <span className="text-sm">{item.title}</span>
                     </Link>
@@ -53,7 +55,7 @@ export function AppSidebar() {
                 <>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <Link to="/register" className="flex items-center gap-3 px-2 py-2">
+                      <Link to="/register" className={`flex items-center gap-3 px-2 py-2 ${location.pathname === "/register" ? "bg-secondary/50 text-secondary-foreground" : ""}`}>
                         <User className="w-5 h-5" />
                         <span className="text-sm">Регистрация</span>
                       </Link>
@@ -61,7 +63,7 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <Link to="/login" className="flex items-center gap-3 px-2 py-2">
+                      <Link to="/login" className={`flex items-center gap-3 px-2 py-2 ${location.pathname === "/login" ? "bg-secondary/50 text-secondary-foreground" : ""}`}>
                         <LogOut className="w-5 h-5" />
                         <span className="text-sm">Вход</span>
                       </Link>
@@ -73,7 +75,7 @@ export function AppSidebar() {
                   {authItems.map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild>
-                        <Link to={item.url} className="flex items-center gap-3 px-2 py-2">
+                        <Link to={item.url} className={`flex items-center gap-3 px-2 py-2 ${location.pathname === item.url ? "bg-secondary/50 text-secondary-foreground" : ""}`}>
                           <item.icon className="w-5 h-5" />
                           <span className="text-sm">{item.title}</span>
                         </Link>
@@ -87,7 +89,7 @@ export function AppSidebar() {
                       {adminItems.map((item) => (
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton asChild>
-                            <Link to={item.url} className="flex items-center gap-3 px-2 py-2">
+                            <Link to={item.url} className={`flex items-center gap-3 px-2 py-2 ${location.pathname === item.url ? "bg-secondary/50 text-secondary-foreground" : ""}`}>
                               <item.icon className="w-5 h-5" />
                               <span className="text-sm">{item.title}</span>
                             </Link>
