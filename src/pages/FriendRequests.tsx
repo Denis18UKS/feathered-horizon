@@ -37,7 +37,8 @@ const FriendRequests = () => {
 
             try {
                 const decodedToken = JSON.parse(atob(token.split('.')[1])); // Декодируем JWT
-                console.log("Ваш user_id:", decodedToken.user_id);
+                console.log("Ваш user_id:", decodedToken.id);
+                const currentUserId = decodedToken.id;
 
                 const response = await fetch("http://localhost:5000/friend-requests", {
                     headers: { "Authorization": `Bearer ${token}` },
@@ -59,18 +60,20 @@ const FriendRequests = () => {
                     throw new Error("Неверная структура данных");
                 }
 
-                // Формируем список заявок
-                const formattedRequests = data.map((req, index) => ({
-                    id: index,
-                    user_id: req.user_id,
-                    friend_id: req.friend_id,
-                    status: req.status,
-                    created_at: req.created_at || "",
-                    friend: {
-                        username: req.friend_name,
-                        avatar: req.avatar || null,
-                    },
-                }));
+                // Формируем список заявок и отфильтровываем свой аккаунт
+                const formattedRequests = data
+                    .filter(req => req.user_id !== currentUserId) // Исключаем заявки от себя к себе
+                    .map((req, index) => ({
+                        id: index,
+                        user_id: req.user_id,
+                        friend_id: req.friend_id,
+                        status: req.status,
+                        created_at: req.created_at || "",
+                        friend: {
+                            username: req.user_name || req.friend_name, // Используем имя отправителя
+                            avatar: req.avatar || null,
+                        },
+                    }));
 
                 setFriendRequests(formattedRequests);
                 setIsLoading(false);
@@ -191,7 +194,7 @@ const FriendRequests = () => {
                     ) : (
                         <ul className="space-y-4">
                             {friendRequests.map((request) => (
-                                <li key={request.friend_id} className="flex items-center justify-between border-b pb-2">
+                                <li key={request.id} className="flex items-center justify-between border-b pb-2">
                                     <div className="flex items-center space-x-4">
                                         <img
                                             src={request.friend.avatar ? `http://localhost:5000${request.friend.avatar}` : "/placeholder.svg"}
@@ -201,10 +204,10 @@ const FriendRequests = () => {
                                         <span>{request.friend.username}</span>
                                     </div>
                                     <div className="flex space-x-2">
-                                        <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.friend_id)}>
+                                        <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.user_id)}>
                                             Принять
                                         </Button>
-                                        <Button size="sm" variant="outline" onClick={() => handleRejectRequest(request.friend_id)}>
+                                        <Button size="sm" variant="outline" onClick={() => handleRejectRequest(request.user_id)}>
                                             Отклонить
                                         </Button>
                                     </div>
