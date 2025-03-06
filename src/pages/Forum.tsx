@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/pages/AuthContext";
 
 const Forum = () => {
     const [questions, setQuestions] = useState([]);
@@ -19,9 +20,13 @@ const Forum = () => {
     const [newQuestion, setNewQuestion] = useState({ title: '', description: '' });
     const [newAnswer, setNewAnswer] = useState('');
     const { toast } = useToast();
+    const { isAuthenticated } = useAuth();
 
-    const userId = localStorage.getItem('userId');
+    // Извлекаем ID пользователя из JWT токена
     const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId') || 
+                  (token ? JSON.parse(atob(token.split('.')[1])).id : null);
+    
     const navigate = useNavigate();
     
     // Загрузка вопросов с сервера
@@ -39,7 +44,20 @@ const Forum = () => {
 
     useEffect(() => {
         fetchQuestions();
-    }, []);
+        
+        // Сохраняем userId в localStorage если есть токен
+        if (token && !localStorage.getItem('userId')) {
+            try {
+                const decodedToken = JSON.parse(atob(token.split('.')[1]));
+                if (decodedToken.id) {
+                    localStorage.setItem('userId', decodedToken.id.toString());
+                    console.info('Ваш user_id:', decodedToken.id);
+                }
+            } catch (error) {
+                console.error('Ошибка при декодировании токена:', error);
+            }
+        }
+    }, [token]);
 
     // Добавление нового вопроса
     const addQuestion = async (e: React.FormEvent) => {
@@ -50,8 +68,8 @@ const Forum = () => {
             return;
         }
 
-        // Проверяем авторизацию
-        if (!token || !userId) {
+        // Проверяем авторизацию через контекст
+        if (!isAuthenticated || !token) {
             toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
             return;
         }
@@ -92,7 +110,7 @@ const Forum = () => {
 
     // Закрытие вопроса
     const handleCloseQuestion = async (questionId: number) => {
-        if (!token) {
+        if (!isAuthenticated || !token) {
             toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
             return;
         }
@@ -150,8 +168,8 @@ const Forum = () => {
             return;
         }
 
-        // Проверка авторизации
-        if (!token || !userId) {
+        // Проверка авторизации через контекст
+        if (!isAuthenticated || !token) {
             toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
             return;
         }
@@ -245,6 +263,7 @@ const Forum = () => {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Задать вопрос</DialogTitle>
+                        <DialogDescription>Заполните форму для создания нового вопроса</DialogDescription>
                     </DialogHeader>
                     <form onSubmit={addQuestion}>
                         <Label>Тема</Label>
@@ -261,7 +280,10 @@ const Forum = () => {
             {/* Модальное окно для добавления ответа */}
             <Dialog open={showAddAnswerModal} onOpenChange={setShowAddAnswerModal}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Добавить ответ</DialogTitle></DialogHeader>
+                    <DialogHeader>
+                        <DialogTitle>Добавить ответ</DialogTitle>
+                        <DialogDescription>Введите ваш ответ на вопрос</DialogDescription>
+                    </DialogHeader>
                     <Textarea value={newAnswer} onChange={(e) => setNewAnswer(e.target.value)} required />
                     <DialogFooter>
                         <Button onClick={addAnswer}>Ответить</Button>
@@ -274,6 +296,7 @@ const Forum = () => {
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Ответы</DialogTitle>
+                        <DialogDescription>Список всех ответов на вопрос</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
                         {answers.length > 0 ? (
@@ -292,10 +315,8 @@ const Forum = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
         </div>
     );
 };
 
 export default Forum;
-
