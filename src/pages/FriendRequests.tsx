@@ -104,7 +104,8 @@ const FriendRequests = () => {
 
             if (!response.ok) throw new Error(`Ошибка принятия: ${response.status}`);
 
-            setFriendRequests(friendRequests.filter(req => req.friend_id !== friendId));
+            // Обновляем локальное состояние без перезагрузки страницы
+            setFriendRequests(prev => prev.filter(req => req.user_id !== friendId));
             toast({
                 title: "Заявка принята",
                 description: "Вы стали друзьями!",
@@ -132,7 +133,8 @@ const FriendRequests = () => {
 
             if (!response.ok) throw new Error(`Ошибка отклонения: ${response.status}`);
 
-            setFriendRequests(friendRequests.filter(req => req.friend_id !== friendId));
+            // Обновляем локальное состояние без перезагрузки страницы
+            setFriendRequests(prev => prev.filter(req => req.user_id !== friendId));
             toast({
                 title: "Заявка отклонена",
                 description: "Вы отклонили заявку на дружбу.",
