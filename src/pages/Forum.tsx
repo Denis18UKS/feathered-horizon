@@ -48,11 +48,6 @@ const Forum = () => {
             return;
         }
 
-        if (!token || !userId) {
-            toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
-            return;
-        }
-
         try {
             const response = await fetch('http://localhost:5000/forums', {
                 method: 'POST',
@@ -73,8 +68,57 @@ const Forum = () => {
             setQuestions((prev) => [...prev, newQuestionFromDB]);
             setShowAddQuestionModal(false);
             setNewQuestion({ title: '', description: '' });
+            toast({
+                title: "Успешно",
+                description: "Вопрос успешно создан",
+            });
         } catch (error) {
             console.error('Ошибка при добавлении вопроса:', error);
+            toast({ 
+                title: "Ошибка", 
+                description: "Не удалось создать вопрос", 
+                variant: "destructive" 
+            });
+        }
+    };
+
+    // Закрытие вопроса
+    const handleCloseQuestion = async (questionId: number) => {
+        if (!token) {
+            toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://localhost:5000/forums/${questionId}/close`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+
+            setQuestions(prev => 
+                prev.map(q => 
+                    q.id === questionId 
+                        ? { ...q, status: 'решён' } 
+                        : q
+                )
+            );
+
+            toast({
+                title: "Успешно",
+                description: "Вопрос закрыт",
+            });
+        } catch (error) {
+            console.error('Ошибка при закрытии вопроса:', error);
+            toast({ 
+                title: "Ошибка", 
+                description: "Не удалось закрыть вопрос", 
+                variant: "destructive" 
+            });
         }
     };
 
@@ -153,14 +197,23 @@ const Forum = () => {
                                     <p><strong>Дата:</strong> {new Date(q.created_at).toLocaleDateString()}</p>
                                     <p><strong>Статус:</strong> {q.status}</p>
                                 </CardContent>
-                                <CardFooter>
+                                <CardFooter className="flex gap-2">
                                     <Button onClick={() => navigate(`/forums/${q.id}/answers`)}>
                                         Посмотреть ответы
                                     </Button>
-                                    {q.status !== 'решён' && q.user_id !== userId && (
-                                        <Button onClick={() => { setSelectedQuestion(q.id); setShowAddAnswerModal(true); }}>
-                                            Ответить
-                                        </Button>
+                                    {q.status !== 'решён' && (
+                                        userId === q.user_id ? (
+                                            <Button 
+                                                variant="outline"
+                                                onClick={() => handleCloseQuestion(q.id)}
+                                            >
+                                                Закрыть вопрос
+                                            </Button>
+                                        ) : (
+                                            <Button onClick={() => { setSelectedQuestion(q.id); setShowAddAnswerModal(true); }}>
+                                                Ответить
+                                            </Button>
+                                        )
                                     )}
                                 </CardFooter>
                             </Card>
