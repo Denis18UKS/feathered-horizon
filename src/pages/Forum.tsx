@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ const Forum = () => {
     const userId = localStorage.getItem('userId');
     const token = localStorage.getItem('token');
     const navigate = useNavigate();
+    
     // Загрузка вопросов с сервера
     const fetchQuestions = async () => {
         try {
@@ -45,6 +47,12 @@ const Forum = () => {
 
         if (!newQuestion.title.trim() || !newQuestion.description.trim()) {
             toast({ title: "Ошибка", description: "Заполните все поля.", variant: "destructive" });
+            return;
+        }
+
+        // Проверяем авторизацию
+        if (!token || !userId) {
+            toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
             return;
         }
 
@@ -142,6 +150,7 @@ const Forum = () => {
             return;
         }
 
+        // Проверка авторизации
         if (!token || !userId) {
             toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
             return;
@@ -171,8 +180,17 @@ const Forum = () => {
             setAnswers((prev) => [...prev, newAnswerFromDB]);
             setNewAnswer('');
             setShowAddAnswerModal(false);
+            toast({
+                title: "Успешно",
+                description: "Ответ успешно добавлен",
+            });
         } catch (error) {
             console.error('Ошибка при добавлении ответа:', error);
+            toast({ 
+                title: "Ошибка", 
+                description: "Не удалось добавить ответ", 
+                variant: "destructive" 
+            });
         }
     };
 
@@ -202,7 +220,7 @@ const Forum = () => {
                                         Посмотреть ответы
                                     </Button>
                                     {q.status !== 'решён' && (
-                                        userId === q.user_id ? (
+                                        Number(userId) === Number(q.user_id) ? (
                                             <Button 
                                                 variant="outline"
                                                 onClick={() => handleCloseQuestion(q.id)}
@@ -280,3 +298,4 @@ const Forum = () => {
 };
 
 export default Forum;
+
