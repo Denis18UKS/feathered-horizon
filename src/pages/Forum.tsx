@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -273,6 +272,12 @@ const Forum = () => {
         }
     };
 
+    // Проверяем, является ли текущий пользователь автором вопроса
+    const isQuestionAuthor = (questionUserId) => {
+        if (!userId || !questionUserId) return false;
+        return String(userId) === String(questionUserId);
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="space-y-8">
@@ -299,7 +304,7 @@ const Forum = () => {
                                         Посмотреть ответы
                                     </Button>
                                     {q.status !== 'решён' && (
-                                        String(userId) === String(q.user_id) ? (
+                                        isQuestionAuthor(q.user_id) ? (
                                             <Button 
                                                 variant="outline"
                                                 onClick={() => handleCloseQuestion(q.id)}
