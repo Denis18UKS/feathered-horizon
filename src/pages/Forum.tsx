@@ -19,11 +19,11 @@ const Forum = () => {
 
     // Извлекаем ID пользователя из JWT токена
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId') ||
-        (token ? JSON.parse(atob(token.split('.')[1])).id : null);
-
+    const userId = localStorage.getItem('userId') || 
+                  (token ? JSON.parse(atob(token.split('.')[1])).id : null);
+    
     const navigate = useNavigate();
-
+    
     // Загрузка вопросов с сервера
     const fetchQuestions = async () => {
         try {
@@ -39,7 +39,7 @@ const Forum = () => {
 
     useEffect(() => {
         fetchQuestions();
-
+        
         // Сохраняем userId в localStorage если есть токен
         if (token && !localStorage.getItem('userId')) {
             try {
@@ -95,10 +95,10 @@ const Forum = () => {
             });
         } catch (error) {
             console.error('Ошибка при добавлении вопроса:', error);
-            toast({
-                title: "Ошибка",
-                description: "Не удалось создать вопрос",
-                variant: "destructive"
+            toast({ 
+                title: "Ошибка", 
+                description: "Не удалось создать вопрос", 
+                variant: "destructive" 
             });
         }
     };
@@ -122,10 +122,10 @@ const Forum = () => {
 
             if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
 
-            setQuestions(prev =>
-                prev.map(q =>
-                    q.id === questionId
-                        ? { ...q, status: 'решён' }
+            setQuestions(prev => 
+                prev.map(q => 
+                    q.id === questionId 
+                        ? { ...q, status: 'решён' } 
                         : q
                 )
             );
@@ -136,10 +136,10 @@ const Forum = () => {
             });
         } catch (error) {
             console.error('Ошибка при закрытии вопроса:', error);
-            toast({
-                title: "Ошибка",
-                description: "Не удалось закрыть вопрос",
-                variant: "destructive"
+            toast({ 
+                title: "Ошибка", 
+                description: "Не удалось закрыть вопрос", 
+                variant: "destructive" 
             });
         }
     };
@@ -171,7 +171,7 @@ const Forum = () => {
                                     </Button>
                                     {q.status !== 'решён' && (
                                         Number(userId) === Number(q.user_id) ? (
-                                            <Button
+                                            <Button 
                                                 variant="outline"
                                                 onClick={() => handleCloseQuestion(q.id)}
                                             >
