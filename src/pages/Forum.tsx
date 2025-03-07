@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,22 +12,18 @@ import { useAuth } from "@/pages/AuthContext";
 const Forum = () => {
     const [questions, setQuestions] = useState([]);
     const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
-    const [showAnswersModal, setShowAnswersModal] = useState(false);
-    const [showAddAnswerModal, setShowAddAnswerModal] = useState(false);
-    const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null);
-    const [answers, setAnswers] = useState([]);
     const [newQuestion, setNewQuestion] = useState({ title: '', description: '' });
-    const [newAnswer, setNewAnswer] = useState('');
+    const [selectedQuestion, setSelectedQuestion] = useState<number | null>(null); // Исправлено
     const { toast } = useToast();
     const { isAuthenticated } = useAuth();
 
     // Извлекаем ID пользователя из JWT токена
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId') || 
-                  (token ? JSON.parse(atob(token.split('.')[1])).id : null);
-    
+    const userId = localStorage.getItem('userId') ||
+        (token ? JSON.parse(atob(token.split('.')[1])).id : null);
+
     const navigate = useNavigate();
-    
+
     // Загрузка вопросов с сервера
     const fetchQuestions = async () => {
         try {
@@ -44,7 +39,7 @@ const Forum = () => {
 
     useEffect(() => {
         fetchQuestions();
-        
+
         // Сохраняем userId в localStorage если есть токен
         if (token && !localStorage.getItem('userId')) {
             try {
@@ -100,10 +95,10 @@ const Forum = () => {
             });
         } catch (error) {
             console.error('Ошибка при добавлении вопроса:', error);
-            toast({ 
-                title: "Ошибка", 
-                description: "Не удалось создать вопрос", 
-                variant: "destructive" 
+            toast({
+                title: "Ошибка",
+                description: "Не удалось создать вопрос",
+                variant: "destructive"
             });
         }
     };
@@ -116,20 +111,21 @@ const Forum = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:5000/forums/${questionId}/close`, {
+            const response = await fetch(`http://localhost:5000/forums/${questionId}/status`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
+                body: JSON.stringify({ status: 'решён' }), // Передаем статус
             });
 
             if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
 
-            setQuestions(prev => 
-                prev.map(q => 
-                    q.id === questionId 
-                        ? { ...q, status: 'решён' } 
+            setQuestions(prev =>
+                prev.map(q =>
+                    q.id === questionId
+                        ? { ...q, status: 'решён' }
                         : q
                 )
             );
@@ -140,74 +136,10 @@ const Forum = () => {
             });
         } catch (error) {
             console.error('Ошибка при закрытии вопроса:', error);
-            toast({ 
-                title: "Ошибка", 
-                description: "Не удалось закрыть вопрос", 
-                variant: "destructive" 
-            });
-        }
-    };
-
-    // Загрузка ответов к вопросу
-    const fetchAnswers = async (questionId: number) => {
-        try {
-            const response = await fetch(`http://localhost:5000/forums/${questionId}/answers`);
-            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
-            const data = await response.json();
-            setAnswers(data);
-            setShowAnswersModal(true);
-        } catch (error) {
-            console.error('Ошибка при загрузке ответов:', error);
-        }
-    };
-
-    // Добавление ответа
-    const addAnswer = async () => {
-        if (!newAnswer.trim()) {
-            toast({ title: "Ошибка", description: "Ответ не может быть пустым.", variant: "destructive" });
-            return;
-        }
-
-        // Проверка авторизации через контекст
-        if (!isAuthenticated || !token) {
-            toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
-            return;
-        }
-
-        if (selectedQuestion === null) {
-            console.error('Ошибка: Не выбран вопрос.');
-            return;
-        }
-
-        try {
-            const response = await fetch(`http://localhost:5000/forums/${selectedQuestion}/answers`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    answer: newAnswer,
-                    user_id: userId,
-                }),
-            });
-
-            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
-
-            const newAnswerFromDB = await response.json();
-            setAnswers((prev) => [...prev, newAnswerFromDB]);
-            setNewAnswer('');
-            setShowAddAnswerModal(false);
             toast({
-                title: "Успешно",
-                description: "Ответ успешно добавлен",
-            });
-        } catch (error) {
-            console.error('Ошибка при добавлении ответа:', error);
-            toast({ 
-                title: "Ошибка", 
-                description: "Не удалось добавить ответ", 
-                variant: "destructive" 
+                title: "Ошибка",
+                description: "Не удалось закрыть вопрос",
+                variant: "destructive"
             });
         }
     };
@@ -239,14 +171,14 @@ const Forum = () => {
                                     </Button>
                                     {q.status !== 'решён' && (
                                         Number(userId) === Number(q.user_id) ? (
-                                            <Button 
+                                            <Button
                                                 variant="outline"
                                                 onClick={() => handleCloseQuestion(q.id)}
                                             >
                                                 Закрыть вопрос
                                             </Button>
                                         ) : (
-                                            <Button onClick={() => { setSelectedQuestion(q.id); setShowAddAnswerModal(true); }}>
+                                            <Button onClick={() => { setSelectedQuestion(q.id); /* действие для ответа */ }}>
                                                 Ответить
                                             </Button>
                                         )
@@ -270,49 +202,10 @@ const Forum = () => {
                         <Input value={newQuestion.title} onChange={(e) => setNewQuestion({ ...newQuestion, title: e.target.value })} required />
                         <Label>Описание</Label>
                         <Textarea value={newQuestion.description} onChange={(e) => setNewQuestion({ ...newQuestion, description: e.target.value })} required />
-                        <DialogFooter>
+                        <div className="flex justify-end">
                             <Button type="submit">Отправить</Button>
-                        </DialogFooter>
+                        </div>
                     </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* Модальное окно для добавления ответа */}
-            <Dialog open={showAddAnswerModal} onOpenChange={setShowAddAnswerModal}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Добавить ответ</DialogTitle>
-                        <DialogDescription>Введите ваш ответ на вопрос</DialogDescription>
-                    </DialogHeader>
-                    <Textarea value={newAnswer} onChange={(e) => setNewAnswer(e.target.value)} required />
-                    <DialogFooter>
-                        <Button onClick={addAnswer}>Ответить</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Модальное окно для отображения ответов */}
-            <Dialog open={showAnswersModal} onOpenChange={setShowAnswersModal}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Ответы</DialogTitle>
-                        <DialogDescription>Список всех ответов на вопрос</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        {answers.length > 0 ? (
-                            answers.map((answer) => (
-                                <div key={answer.id} className="border p-2 rounded">
-                                    <p>{answer.answer}</p>
-                                    <p className="text-sm text-gray-500">Автор: {answer.user || "Неизвестный"}</p>
-                                </div>
-                            ))
-                        ) : (
-                            <p>Ответов пока нет.</p>
-                        )}
-                    </div>
-                    <DialogFooter>
-                        <Button onClick={() => setShowAnswersModal(false)}>Закрыть</Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
