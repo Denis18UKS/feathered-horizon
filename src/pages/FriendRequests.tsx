@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -205,12 +204,7 @@ const FriendRequests = () => {
                         <ul className="space-y-4">
                             {friendRequests.map((request) => (
                                 <li key={request.id} className="flex items-center justify-between border-b pb-2">
-                                    <div className="flex items-center space-x-4">
-                                        <img
-                                            src={request.sender.avatar ? `http://localhost:5000${request.sender.avatar}` : "/placeholder.svg"}
-                                            alt={request.sender.username}
-                                            className="w-12 h-12 rounded-full object-cover border border-gray-300"
-                                        />
+                                    <div className="flex items-center">
                                         <span>{request.sender.username}</span>
                                     </div>
                                     <div className="flex space-x-2">
