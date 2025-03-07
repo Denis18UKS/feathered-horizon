@@ -16,6 +16,10 @@ interface FriendRequest {
         username: string;
         avatar: string | null;
     };
+    sender: {
+        username: string;
+        avatar: string | null;
+    };
 }
 
 const FriendRequests = () => {
@@ -70,8 +74,12 @@ const FriendRequests = () => {
                         status: req.status,
                         created_at: req.created_at || "",
                         friend: {
-                            username: req.user_name || req.friend_name, // Используем имя отправителя
-                            avatar: req.avatar || null,
+                            username: req.friend_name || "", // Имя получателя (текущий пользователь)
+                            avatar: null,
+                        },
+                        sender: {
+                            username: req.user_name || "", // Имя отправителя
+                            avatar: req.avatar || null, // Аватар отправителя
                         },
                     }));
 
@@ -199,11 +207,11 @@ const FriendRequests = () => {
                                 <li key={request.id} className="flex items-center justify-between border-b pb-2">
                                     <div className="flex items-center space-x-4">
                                         <img
-                                            src={request.friend.avatar ? `http://localhost:5000${request.friend.avatar}` : "/placeholder.svg"}
-                                            alt={request.friend.username}
+                                            src={request.sender.avatar ? `http://localhost:5000${request.sender.avatar}` : "/placeholder.svg"}
+                                            alt={request.sender.username}
                                             className="w-12 h-12 rounded-full object-cover border border-gray-300"
                                         />
-                                        <span>{request.friend.username}</span>
+                                        <span>{request.sender.username}</span>
                                     </div>
                                     <div className="flex space-x-2">
                                         <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.user_id)}>
