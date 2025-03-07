@@ -21,11 +21,37 @@ const Forum = () => {
     const [newAnswer, setNewAnswer] = useState('');
     const { toast } = useToast();
     const { isAuthenticated } = useAuth();
-
-    // Извлекаем ID пользователя из JWT токена
     const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId') || 
-                  (token ? JSON.parse(atob(token.split('.')[1])).id : null);
+
+    // Получаем userId напрямую из хранилища или декодируем из токена
+    let userId = localStorage.getItem('userId');
+    
+    // Функция для декодирования токена и получения userId
+    const getUserIdFromToken = () => {
+        if (!token) return null;
+        
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            
+            const decoded = JSON.parse(jsonPayload);
+            return decoded.id ? decoded.id.toString() : null;
+        } catch (error) {
+            console.error('Ошибка при декодировании токена:', error);
+            return null;
+        }
+    };
+    
+    // Если userId не найден в localStorage, пытаемся получить его из токена
+    if (!userId && token) {
+        userId = getUserIdFromToken();
+        if (userId) {
+            localStorage.setItem('userId', userId);
+        }
+    }
     
     const navigate = useNavigate();
     
@@ -44,20 +70,7 @@ const Forum = () => {
 
     useEffect(() => {
         fetchQuestions();
-        
-        // Сохраняем userId в localStorage если есть токен
-        if (token && !localStorage.getItem('userId')) {
-            try {
-                const decodedToken = JSON.parse(atob(token.split('.')[1]));
-                if (decodedToken.id) {
-                    localStorage.setItem('userId', decodedToken.id.toString());
-                    console.info('Ваш user_id:', decodedToken.id);
-                }
-            } catch (error) {
-                console.error('Ошибка при декодировании токена:', error);
-            }
-        }
-    }, [token]);
+    }, []);
 
     // Добавление нового вопроса
     const addQuestion = async (e: React.FormEvent) => {
@@ -68,10 +81,27 @@ const Forum = () => {
             return;
         }
 
-        // Проверяем авторизацию через контекст
-        if (!isAuthenticated || !token) {
+        // Проверяем авторизацию
+        if (!isAuthenticated) {
             toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
             return;
+        }
+
+        // Проверяем наличие токена
+        if (!token) {
+            toast({ title: "Ошибка", description: "Токен авторизации отсутствует.", variant: "destructive" });
+            return;
+        }
+
+        // Проверяем наличие userId
+        if (!userId) {
+            const newUserId = getUserIdFromToken();
+            if (!newUserId) {
+                toast({ title: "Ошибка", description: "Не удалось определить ID пользователя.", variant: "destructive" });
+                return;
+            }
+            userId = newUserId;
+            localStorage.setItem('userId', userId);
         }
 
         try {
@@ -88,7 +118,10 @@ const Forum = () => {
                 }),
             });
 
-            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Ошибка HTTP: ${response.status}`);
+            }
 
             const newQuestionFromDB = await response.json();
             setQuestions((prev) => [...prev, newQuestionFromDB]);
@@ -102,7 +135,7 @@ const Forum = () => {
             console.error('Ошибка при добавлении вопроса:', error);
             toast({ 
                 title: "Ошибка", 
-                description: "Не удалось создать вопрос", 
+                description: error.message || "Не удалось создать вопрос", 
                 variant: "destructive" 
             });
         }
@@ -110,8 +143,13 @@ const Forum = () => {
 
     // Закрытие вопроса
     const handleCloseQuestion = async (questionId: number) => {
-        if (!isAuthenticated || !token) {
+        if (!isAuthenticated) {
             toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
+            return;
+        }
+
+        if (!token) {
+            toast({ title: "Ошибка", description: "Токен авторизации отсутствует.", variant: "destructive" });
             return;
         }
 
@@ -124,7 +162,10 @@ const Forum = () => {
                 },
             });
 
-            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Ошибка HTTP: ${response.status}`);
+            }
 
             setQuestions(prev => 
                 prev.map(q => 
@@ -142,7 +183,7 @@ const Forum = () => {
             console.error('Ошибка при закрытии вопроса:', error);
             toast({ 
                 title: "Ошибка", 
-                description: "Не удалось закрыть вопрос", 
+                description: error.message || "Не удалось закрыть вопрос", 
                 variant: "destructive" 
             });
         }
@@ -168,10 +209,27 @@ const Forum = () => {
             return;
         }
 
-        // Проверка авторизации через контекст
-        if (!isAuthenticated || !token) {
+        // Проверяем авторизацию
+        if (!isAuthenticated) {
             toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
             return;
+        }
+
+        // Проверяем наличие токена
+        if (!token) {
+            toast({ title: "Ошибка", description: "Токен авторизации отсутствует.", variant: "destructive" });
+            return;
+        }
+
+        // Проверяем наличие userId
+        if (!userId) {
+            const newUserId = getUserIdFromToken();
+            if (!newUserId) {
+                toast({ title: "Ошибка", description: "Не удалось определить ID пользователя.", variant: "destructive" });
+                return;
+            }
+            userId = newUserId;
+            localStorage.setItem('userId', userId);
         }
 
         if (selectedQuestion === null) {
@@ -192,7 +250,10 @@ const Forum = () => {
                 }),
             });
 
-            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Ошибка HTTP: ${response.status}`);
+            }
 
             const newAnswerFromDB = await response.json();
             setAnswers((prev) => [...prev, newAnswerFromDB]);
@@ -206,7 +267,7 @@ const Forum = () => {
             console.error('Ошибка при добавлении ответа:', error);
             toast({ 
                 title: "Ошибка", 
-                description: "Не удалось добавить ответ", 
+                description: error.message || "Не удалось добавить ответ", 
                 variant: "destructive" 
             });
         }
@@ -238,7 +299,7 @@ const Forum = () => {
                                         Посмотреть ответы
                                     </Button>
                                     {q.status !== 'решён' && (
-                                        Number(userId) === Number(q.user_id) ? (
+                                        String(userId) === String(q.user_id) ? (
                                             <Button 
                                                 variant="outline"
                                                 onClick={() => handleCloseQuestion(q.id)}
