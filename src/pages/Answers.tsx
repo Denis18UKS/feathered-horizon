@@ -90,6 +90,21 @@ const Answers = () => {
                     <p>Ответов пока нет.</p>
                 )}
             </div>
+
+            <Button className="mt-6" onClick={() => setShowAddAnswerModal(true)}>Добавить ответ</Button>
+
+            {/* Модальное окно для добавления ответа */}
+            <Dialog open={showAddAnswerModal} onOpenChange={setShowAddAnswerModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Добавить ответ</DialogTitle>
+                    </DialogHeader>
+                    <Textarea value={newAnswer} onChange={(e) => setNewAnswer(e.target.value)} required />
+                    <DialogFooter>
+                        <Button onClick={addAnswer}>Отправить</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
