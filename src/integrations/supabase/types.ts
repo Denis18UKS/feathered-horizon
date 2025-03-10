@@ -9,13 +9,321 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      answers: {
+        Row: {
+          answer: string
+          created_at: string
+          forum_id: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          forum_id: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          forum_id?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answers_forum_id_fkey"
+            columns: ["forum_id"]
+            isOneToOne: false
+            referencedRelation: "forums"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_participants: {
+        Row: {
+          chat_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_participants_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chats: {
+        Row: {
+          created_at: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      forums: {
+        Row: {
+          created_at: string
+          id: string
+          question: string
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question: string
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question?: string
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      friends: {
+        Row: {
+          created_at: string
+          friend_id: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          chat_id: string
+          created_at: string
+          id: string
+          message: string
+          read: boolean
+          user_id: string | null
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          id?: string
+          message: string
+          read?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          read?: boolean
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          link: string | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          link?: string | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          link?: string | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          image_url: string | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          image_url?: string | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          email: string
+          github_username: string | null
+          id: string
+          ip_address: string | null
+          last_login: string
+          location: string | null
+          skills: string | null
+          username: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          email: string
+          github_username?: string | null
+          id: string
+          ip_address?: string | null
+          last_login?: string
+          location?: string | null
+          skills?: string | null
+          username: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          email?: string
+          github_username?: string | null
+          id?: string
+          ip_address?: string | null
+          last_login?: string
+          location?: string | null
+          skills?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
+      repositories: {
+        Row: {
+          created_at: string
+          description: string | null
+          html_url: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          html_url: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          html_url?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          user_id: string
+          role_name: string
+        }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: {
+          user_uid: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
