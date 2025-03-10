@@ -1,25 +1,27 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from 'date-fns';
 import { supabase } from "@/integrations/supabase/client";
 
+interface Profile {
+  username: string;
+  avatar: string | null;
+}
+
 interface Answer {
-  id: number;
+  id: string;
   created_at: string;
   answer: string;
-  forum_id: number;
+  forum_id: string;
   user_id: string;
-  profiles: {
-    username: string;
-    avatar: string | null;
-  } | null;
+  profiles?: Profile | null;
 }
 
 const Answers = () => {
@@ -154,7 +156,8 @@ const Answers = () => {
       }
 
       if (data) {
-        setAnswers([data as Answer, ...answers]);
+        const newAnswerWithProfile = data as unknown as Answer;
+        setAnswers([newAnswerWithProfile, ...answers]);
         setNewAnswer('');
         toast({
           title: "Успех",

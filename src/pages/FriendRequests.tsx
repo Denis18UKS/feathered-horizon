@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -6,35 +7,60 @@ import { useAuth } from "@/pages/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 
+interface FriendRequest {
+  id: string;
+  created_at: string;
+  sender_id: string;
+  receiver_id: string;
+  status: string;
+  sender_profile?: {
+    id: string;
+    username: string;
+    avatar: string | null;
+  } | null;
+}
+
 const FriendRequests = () => {
   const { user } = useAuth();
-  const [friendRequests, setFriendRequests] = useState<any[]>([]);
+  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
 
   useEffect(() => {
     const fetchFriendRequests = async () => {
       if (user) {
         try {
           const { data, error } = await supabase
-            .from("friend_requests")
+            .from("friends")
             .select(`
               id,
               created_at,
-              profiles:sender_id (
+              friend_id,
+              user_id,
+              status,
+              profiles:friend_id (
                 id,
                 username,
                 avatar
               )
             `)
-            .eq("receiver_id", user.id)
-            .eq("status", "pending")
-            .order("created_at", { ascending: false });
+            .eq("user_id", user.id)
+            .eq("status", "pending");
 
           if (error) {
             console.error("Error fetching friend requests:", error);
           }
 
           if (data) {
-            setFriendRequests(data);
+            // Transform the data to match our FriendRequest interface
+            const transformedData = data.map(item => ({
+              id: item.id,
+              created_at: item.created_at,
+              sender_id: item.friend_id,
+              receiver_id: user.id,
+              status: item.status,
+              sender_profile: item.profiles
+            }));
+            
+            setFriendRequests(transformedData);
           }
         } catch (error) {
           console.error("Error fetching friend requests:", error);
@@ -48,7 +74,7 @@ const FriendRequests = () => {
   const handleAccept = async (requestId: string) => {
     try {
       const { error } = await supabase
-        .from("friend_requests")
+        .from("friends")
         .update({ status: "accepted" })
         .eq("id", requestId);
 
@@ -65,7 +91,7 @@ const FriendRequests = () => {
   const handleReject = async (requestId: string) => {
     try {
       const { error } = await supabase
-        .from("friend_requests")
+        .from("friends")
         .update({ status: "rejected" })
         .eq("id", requestId);
 
@@ -94,14 +120,14 @@ const FriendRequests = () => {
               <div key={request.id} className="flex items-center justify-between p-3 border-b">
                 <div className="flex items-center">
                   <Avatar className="h-10 w-10 mr-3">
-                    {request.profiles && request.profiles.avatar ? (
-                      <AvatarImage src={request.profiles.avatar} alt={request.profiles?.username || 'User'} />
+                    {request.sender_profile && request.sender_profile.avatar ? (
+                      <AvatarImage src={request.sender_profile.avatar} alt={request.sender_profile?.username || 'User'} />
                     ) : (
-                      <AvatarFallback>{request.profiles?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                      <AvatarFallback>{request.sender_profile?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                     )}
                   </Avatar>
                   <div>
-                    <p className="font-medium">{request.profiles?.username || 'Пользователь'}</p>
+                    <p className="font-medium">{request.sender_profile?.username || 'Пользователь'}</p>
                     <p className="text-xs text-gray-500">{format(new Date(request.created_at), 'dd.MM.yyyy')}</p>
                   </div>
                 </div>

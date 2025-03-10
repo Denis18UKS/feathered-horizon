@@ -16,6 +16,7 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [githubUsername, setGithubUsername] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -35,7 +36,7 @@ const Register = () => {
     }
 
     try {
-      await signup(email, password, username);
+      await signup(email, password, username, githubUsername);
       toast({
         title: "Регистрация успешна",
         description: "Аккаунт успешно создан. Проверьте email для подтверждения.",
@@ -43,10 +44,17 @@ const Register = () => {
       navigate("/login");
     } catch (err: any) {
       console.error(err);
-      setErrorMessage(err.message || "Произошла ошибка при регистрации");
+      
+      // Handle specific error types
+      if (err.message.includes("duplicate key")) {
+        setErrorMessage("Пользователь с таким email уже существует");
+      } else {
+        setErrorMessage(err.message || "Произошла ошибка при регистрации");
+      }
+      
       toast({
         title: "Ошибка регистрации",
-        description: err.message || "Не удалось создать аккаунт",
+        description: errorMessage || "Не удалось создать аккаунт",
         variant: "destructive",
       });
     }
@@ -85,6 +93,14 @@ const Register = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="githubUsername">GitHub Username</Label>
+              <Input
+                id="githubUsername"
+                value={githubUsername}
+                onChange={(e) => setGithubUsername(e.target.value)}
               />
             </div>
             <div className="space-y-2">

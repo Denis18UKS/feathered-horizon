@@ -11,7 +11,7 @@ interface AuthContextType {
   role: string | undefined;
   setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, username: string) => Promise<void>;
+  signup: (email: string, password: string, username: string, githubUsername?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
   
   // Signup function
-  const signup = async (email: string, password: string, username: string) => {
+  const signup = async (email: string, password: string, username: string, githubUsername?: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -133,6 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         options: {
           data: {
             username: username,
+            github_username: githubUsername || null,
           },
         },
       });
