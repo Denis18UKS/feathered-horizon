@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Mail } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/pages/AuthContext";
 
@@ -16,6 +16,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [showBlockedAlert, setShowBlockedAlert] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [showNotConfirmedAlert, setShowNotConfirmedAlert] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -37,6 +38,13 @@ const Login = () => {
       
       if (err.message?.includes("blocked")) {
         setShowBlockedAlert(true);
+      } else if (err.message?.includes("Email not confirmed")) {
+        setShowNotConfirmedAlert(true);
+        toast({
+          title: "Почта не подтверждена",
+          description: "Пожалуйста, проверьте почту и подтвердите ваш email",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Ошибка",
@@ -85,7 +93,27 @@ const Login = () => {
             </Button>
           </form>
         </CardContent>
+        <CardFooter className="flex justify-center">
+          <Button variant="link" onClick={() => navigate("/register")}>
+            Нет аккаунта? Зарегистрироваться
+          </Button>
+        </CardFooter>
       </Card>
+
+      {showNotConfirmedAlert && (
+        <Alert className="fixed top-4 right-4 w-96 bg-amber-50 border-amber-200">
+          <Mail className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800">Подтвердите вашу почту</AlertTitle>
+          <AlertDescription className="mt-2 text-amber-700">
+            <p>Вам необходимо подтвердить вашу почту, перейдя по ссылке в письме. Проверьте ваш почтовый ящик.</p>
+            <div className="mt-4 flex space-x-4">
+              <Button onClick={() => setShowNotConfirmedAlert(false)} variant="outline" className="border-amber-300">
+                Понятно
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {showBlockedAlert && (
         <Alert variant="destructive" className="fixed top-4 right-4 w-96">
