@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from './AuthContext';
+import { supabase } from "@/integrations/supabase/client";
 
 const Register = () => {
   const [username, setUsername] = useState("");
@@ -14,103 +17,55 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [gitHubUsername, setGitHubUsername] = useState("");
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signup } = useAuth();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-          github_username: gitHubUsername || null,
-        }),
+      // Register with Supabase
+      await signup(email, password, username);
+      
+      // If GitHub username provided, update profile
+      if (gitHubUsername) {
+        const { data: userData } = await supabase.auth.getUser();
+        
+        if (userData && userData.user) {
+          // Update the user's GitHub username in the profiles table
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ github_username: gitHubUsername })
+            .eq('id', userData.user.id);
+          
+          if (updateError) {
+            console.error("Error updating GitHub username:", updateError);
+          }
+        }
+      }
+
+      setShowSuccessAlert(true);
+      toast({
+        title: "Успешная регистрация",
+        description: "Теперь вы можете войти в свой аккаунт",
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setShowSuccessAlert(true);
-        toast({
-          title: "Успешная регистрация",
-          description: "Теперь вы можете войти в свой аккаунт",
-        });
-
-        if (gitHubUsername) {
-          await fetchAndSaveRepositories(gitHubUsername);
-        }
-
-        setTimeout(() => {
-          setShowSuccessAlert(false);
-          navigate("/login");
-        }, 3000);
-      } else {
-        toast({
-          title: "Ошибка",
-          description: data.message,
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
+      setTimeout(() => {
+        setShowSuccessAlert(false);
+        navigate("/login");
+      }, 3000);
+    } catch (err: any) {
       console.error(err);
       toast({
         title: "Ошибка",
-        description: "Ошибка при отправке данных на сервер",
+        description: err.message || "Ошибка при регистрации",
         variant: "destructive",
       });
-    }
-  };
-
-  const fetchAndSaveRepositories = async (githubUsername: string) => {
-    try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        console.error("Token not found, authorization required");
-        return;
-      }
-
-      const response = await fetch(`http://localhost:5000/repositories/${githubUsername}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        console.error("Error fetching repositories:", data.message);
-        return;
-      }
-
-      const repositories = await response.json();
-
-      const saveResponse = await fetch("http://localhost:5000/repositories", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          githubUsername,
-          repositories,
-        }),
-      });
-
-      if (!saveResponse.ok) {
-        const data = await saveResponse.json();
-        console.error("Error saving repositories:", data.message);
-      } else {
-        console.log("Repositories saved successfully");
-      }
-    } catch (error) {
-      console.error("Error in fetchAndSaveRepositories:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -160,8 +115,8 @@ const Register = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Зарегистрироваться
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Регистрация..." : "Зарегистрироваться"}
             </Button>
           </form>
         </CardContent>
