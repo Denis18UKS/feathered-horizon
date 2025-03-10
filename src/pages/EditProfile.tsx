@@ -1,242 +1,246 @@
-
-import React, { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/components/ui/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
-import { v4 as uuidv4 } from 'uuid';
 
 const EditProfile = () => {
+  const { user } = useAuth();
+  const [username, setUsername] = useState("");
+  const [location, setLocation] = useState("");
+  const [skills, setSkills] = useState("");
+  const [githubUsername, setGithubUsername] = useState("");
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [githubUsername, setGithubUsername] = useState("");
-  const [skills, setSkills] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) {
-        setError("Пользователь не авторизован!");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          throw error;
-        }
-
-        if (data) {
-          setEmail(data.email || "");
-          setUsername(data.username || "");
-          setGithubUsername(data.github_username || "");
-          setSkills(data.skills || "");
-          setAvatarUrl(data.avatar || null);
-        }
-      } catch (error: any) {
-        console.error("Error fetching profile:", error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [user]);
-
-  const uploadAvatar = async () => {
-    if (!avatar || !user) {
-      return null;
+    if (user) {
+      fetchUserProfile();
+    } else {
+      navigate("/login");
     }
+  }, [user, navigate]);
 
-    const fileExt = avatar.name.split('.').pop();
-    const fileName = `${user.id}-${uuidv4()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
-
+  const fetchUserProfile = async () => {
     try {
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, avatar);
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user?.id)
+        .single();
 
-      if (uploadError) {
-        throw uploadError;
+      if (error) throw error;
+
+      if (data) {
+        setUsername(data.username || "");
+        setLocation(data.location || "");
+        setSkills(data.skills || "");
+        setGithubUsername(data.github_username || "");
+        setAvatarUrl(data.avatar || null);
       }
-
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      return data.publicUrl;
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      return null;
-    }
-  };
-
-  const handleSave = async () => {
-    if (!user) {
-      toast({ title: "Ошибка", description: "Не удалось сохранить профиль, пользователь не авторизован" });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      let newAvatarUrl = avatarUrl;
-
-      if (avatar) {
-        newAvatarUrl = await uploadAvatar();
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username,
-          github_username: githubUsername,
-          skills,
-          avatar: newAvatarUrl,
-        })
-        .eq('id', user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      toast({ title: "Успех", description: "Профиль обновлён" });
-      navigate("/profile");
     } catch (error: any) {
-      console.error("Error updating profile:", error);
-      toast({ title: "Ошибка", description: error.message });
+      console.error("Error fetching profile:", error.message);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить профиль",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      if (!file.type.startsWith("image/")) {
-        toast({ title: "Ошибка", description: "Пожалуйста, выберите изображение" });
+      if (file.size > 2 * 1024 * 1024) {
+        toast({
+          title: "Ошибка",
+          description: "Размер файла не должен превышать 2MB",
+          variant: "destructive",
+        });
         return;
       }
       setAvatar(file);
+      setAvatarUrl(URL.createObjectURL(file));
     }
   };
 
-  if (loading) {
+  const uploadAvatar = async (): Promise<string | null> => {
+    if (!avatar) return avatarUrl;
+
+    try {
+      const fileExt = avatar.name.split('.').pop();
+      const fileName = `${user?.id}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, avatar);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      return data.publicUrl;
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error.message);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось загрузить аватар",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Upload avatar if changed
+      const newAvatarUrl = await uploadAvatar();
+
+      // Update profile
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          username,
+          location,
+          skills,
+          github_username: githubUsername,
+          avatar: newAvatarUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Профиль обновлен",
+        description: "Ваш профиль успешно обновлен",
+      });
+
+      navigate("/profile");
+    } catch (error: any) {
+      console.error("Error updating profile:", error.message);
+      toast({
+        title: "Ошибка",
+        description: "Не удалось обновить профиль",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="container mx-auto p-4 text-center">
+        <p>Загрузка профиля...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <Card className="w-full">
+    <div className="container mx-auto p-4 max-w-2xl">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Редактирование профиля</CardTitle>
+          <CardTitle>Редактирование профиля</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6">
-            {/* Аватар */}
-            <div className="space-y-2">
-              <Label className="text-lg font-semibold">Аватар</Label>
-              <div className="flex items-center space-x-4">
-                <input 
-                  type="file" 
-                  onChange={handleAvatarChange} 
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="flex flex-col items-center mb-6">
+              <Avatar className="h-24 w-24 mb-4">
+                {avatarUrl ? (
+                  <AvatarImage src={avatarUrl} alt={username} />
+                ) : (
+                  <AvatarFallback>{username.charAt(0).toUpperCase()}</AvatarFallback>
+                )}
+              </Avatar>
+              <div>
+                <Label htmlFor="avatar" className="cursor-pointer inline-block px-4 py-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
+                  Изменить аватар
+                </Label>
+                <Input
+                  id="avatar"
+                  type="file"
                   accept="image/*"
+                  onChange={handleAvatarChange}
+                  className="hidden"
                 />
-                {avatar ? (
-                  <img
-                    src={URL.createObjectURL(avatar)}
-                    alt="Аватар"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-primary/20"
-                  />
-                ) : avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="Аватар"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-primary/20"
-                  />
-                ) : null}
               </div>
             </div>
 
-            {/* Email (нельзя редактировать) */}
             <div className="space-y-2">
-              <Label className="text-lg font-semibold">Email</Label>
-              <Input value={email} disabled className="bg-gray-100 cursor-not-allowed" />
-            </div>
-
-            {/* Имя пользователя */}
-            <div className="space-y-2">
-              <Label className="text-lg font-semibold">Имя пользователя</Label>
+              <Label htmlFor="username">Имя пользователя</Label>
               <Input
+                id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Введите ваше имя пользователя"
+                required
               />
             </div>
 
-            {/* GitHub Username */}
             <div className="space-y-2">
-              <Label className="text-lg font-semibold">GitHub Username</Label>
+              <Label htmlFor="location">Местоположение</Label>
               <Input
+                id="location"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Например: Москва, Россия"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="githubUsername">GitHub Username</Label>
+              <Input
+                id="githubUsername"
                 value={githubUsername}
                 onChange={(e) => setGithubUsername(e.target.value)}
-                placeholder="Введите ваш GitHub Username"
+                placeholder="Ваш username на GitHub"
               />
             </div>
 
-            {/* Навыки */}
             <div className="space-y-2">
-              <Label className="text-lg font-semibold">Навыки</Label>
-              <Input
+              <Label htmlFor="skills">Навыки</Label>
+              <Textarea
+                id="skills"
                 value={skills}
                 onChange={(e) => setSkills(e.target.value)}
-                placeholder="Введите ваши навыки"
+                placeholder="Например: JavaScript, React, Node.js"
+                className="min-h-[100px]"
               />
             </div>
 
-            {error && <p className="text-red-500">{error}</p>}
-          </div>
+            <div className="flex justify-end space-x-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/profile")}
+              >
+                Отмена
+              </Button>
+              <LiquidButton 
+                text="Сохранить изменения" 
+                onClick={handleSubmit} 
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              />
+            </div>
+          </form>
         </CardContent>
       </Card>
-
-      {/* Кнопки */}
-      <div className="flex space-x-4">
-        <LiquidButton
-          text="Сохранить"
-          color1="#9b87f5"
-          color2="#6E59A5"
-          color3="#8F17E1"
-          width={200}
-          height={50}
-          onClick={handleSave}
-        />
-        <Button variant="outline" onClick={() => navigate("/profile")}>
-          Отменить
-        </Button>
-      </div>
     </div>
   );
 };

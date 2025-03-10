@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,10 +8,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/pages/AuthContext"; // Импортируем useAuth
+import { useAuth } from "@/pages/AuthContext";
 
 const Login = () => {
-  const { setIsAuthenticated, login } = useAuth(); // Получаем login из контекста
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showBlockedAlert, setShowBlockedAlert] = useState(false);
@@ -22,51 +23,27 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:5000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Используем метод login из контекста
-        login(data.token, data.user.role);
-
-        setShowSuccessAlert(true);
-        toast({
-          title: "Успешный вход",
-          description: "Добро пожаловать!",
-        });
-
-        // После успешного входа сразу перенаправляем пользователя
-        setIsAuthenticated(true); // Это теперь делается через контекст
-        if (data.user.role === "admin") {
-          navigate("/admin/users");
-        } else {
-          navigate("/profile");
-        }
-      } else {
-        if (data.message === "Ваш аккаунт заблокирован!") {
-          setShowBlockedAlert(true);
-        } else {
-          toast({
-            title: "Ошибка",
-            description: data.message,
-            variant: "destructive",
-          });
-        }
-      }
-    } catch (err) {
-      console.error(err);
+      await login(email, password);
+      
+      setShowSuccessAlert(true);
       toast({
-        title: "Ошибка",
-        description: "Ошибка при отправке данных на сервер",
-        variant: "destructive",
+        title: "Успешный вход",
+        description: "Добро пожаловать!",
       });
+      
+      // Navigation will be handled by the auth state change listener in AuthContext
+    } catch (err: any) {
+      console.error(err);
+      
+      if (err.message?.includes("blocked")) {
+        setShowBlockedAlert(true);
+      } else {
+        toast({
+          title: "Ошибка",
+          description: err.message || "Ошибка при входе",
+          variant: "destructive",
+        });
+      }
     }
   };
 
