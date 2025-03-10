@@ -17,7 +17,7 @@ interface FriendRequest {
   profiles: {
     username: string;
     avatar: string | null;
-  };
+  } | null;
 }
 
 const FriendRequests = () => {
@@ -45,7 +45,7 @@ const FriendRequests = () => {
             friend_id, 
             status, 
             created_at,
-            profiles:user_id(username, avatar)
+            profiles:profiles!user_id(username, avatar)
           `)
           .eq('friend_id', user.id)
           .eq('status', 'pending');
@@ -173,14 +173,14 @@ const FriendRequests = () => {
               {friendRequests.map((request) => (
                 <li key={request.id} className="flex items-center justify-between border-b pb-2">
                   <div className="flex items-center gap-2">
-                    {request.profiles.avatar && (
+                    {request.profiles?.avatar && (
                       <img
                         src={request.profiles.avatar}
                         alt={`${request.profiles.username} avatar`}
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     )}
-                    <span>{request.profiles.username}</span>
+                    <span>{request.profiles?.username || "Неизвестный"}</span>
                   </div>
                   <div className="flex space-x-2">
                     <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.id, request.user_id)}>

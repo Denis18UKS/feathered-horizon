@@ -16,7 +16,7 @@ interface Answer {
   created_at: string;
   profiles?: {
     username: string;
-  };
+  } | null;
 }
 
 const Answers = () => {
@@ -39,7 +39,7 @@ const Answers = () => {
                     answer,
                     user_id,
                     created_at,
-                    profiles:user_id(username)
+                    profiles(username)
                 `)
                 .eq('forum_id', id)
                 .order('created_at', { ascending: false });
@@ -100,7 +100,7 @@ const Answers = () => {
                     answer,
                     user_id,
                     created_at,
-                    profiles:user_id(username)
+                    profiles(username)
                 `);
 
             if (error) {
