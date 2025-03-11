@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 
 interface Post {
   id: number;
@@ -75,6 +75,7 @@ const Index = () => {
     data: news = [], 
     isLoading: newsLoading,
     error: newsError,
+    refetch: refetchNews
   } = useQuery({
     queryKey: ['news'],
     queryFn: fetchNews,
@@ -84,7 +85,8 @@ const Index = () => {
   const {
     data: posts = [],
     isLoading: postsLoading,
-    error: postsError, 
+    error: postsError,
+    refetch: refetchPosts
   } = useQuery({
     queryKey: ['posts'],
     queryFn: fetchPosts,
@@ -126,6 +128,7 @@ const Index = () => {
           description: "Новость успешно добавлена",
         });
         setNewsForm({ title: "", description: "", image_url: "", link: "", file: null });
+        refetchNews(); // Обновляем данные
       } else {
         const errorData = await response.json();
         toast({
@@ -180,6 +183,7 @@ const Index = () => {
           description: "Пост успешно добавлен",
         });
         setPostForm({ title: "", description: "", image_url: "", file: null });
+        refetchPosts(); // Обновляем данные
       } else {
         const errorData = await response.json();
         toast({
@@ -201,7 +205,8 @@ const Index = () => {
   };
 
   const renderCards = (items: Post[], showMore: boolean, type: "news" | "posts") => {
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    // Проверяем, что items является массивом и не пуст
+    if (!Array.isArray(items) || items.length === 0) {
       return (
         <p className="text-muted-foreground text-center py-8">
           {type === "news" ? "Нет новостей" : "Нет постов"}
@@ -255,6 +260,7 @@ const Index = () => {
     ));
   };
 
+  // Отображение состояния загрузки, ошибок и данных в секциях
   const renderSection = (
     title: string, 
     items: Post[], 
@@ -304,7 +310,8 @@ const Index = () => {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : error ? (
-        <div className="text-center py-8 text-destructive">
+        <div className="text-center py-8 text-destructive flex flex-col items-center gap-2">
+          <AlertCircle className="h-8 w-8" />
           <p>Ошибка загрузки данных. Попробуйте позже.</p>
         </div>
       ) : (
@@ -312,7 +319,7 @@ const Index = () => {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {renderCards(items, showMore, type)}
           </div>
-          {items.length > 3 && (
+          {Array.isArray(items) && items.length > 3 && (
             <div className="text-center mt-6">
               <LiquidButton
                 text={showMore ? "Скрыть" : "Показать больше"}
