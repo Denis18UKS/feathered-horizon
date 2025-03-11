@@ -39,7 +39,7 @@ const Answers = () => {
                     answer,
                     user_id,
                     created_at,
-                    profiles:user_id(username)
+                    profiles(username)
                 `)
                 .eq('forum_id', id)
                 .order('created_at', { ascending: false });
@@ -48,12 +48,7 @@ const Answers = () => {
                 throw error;
             }
 
-            const formattedAnswers = data?.map(item => ({
-                ...item,
-                profiles: item.profiles || { username: "Неизвестный" }
-            })) || [];
-
-            setAnswers(formattedAnswers);
+            setAnswers(data || []);
         } catch (error) {
             console.error('Error loading answers:', error);
             toast({
@@ -104,28 +99,16 @@ const Answers = () => {
                     id,
                     answer,
                     user_id,
-                    created_at
-                `)
-                .single();
+                    created_at,
+                    profiles(username)
+                `);
 
             if (error) {
                 throw error;
             }
 
             if (data) {
-                // Fetch the username from profiles
-                const { data: profileData } = await supabase
-                    .from('profiles')
-                    .select('username')
-                    .eq('id', user.id)
-                    .single();
-
-                const newAnswerWithProfile: Answer = {
-                    ...data,
-                    profiles: profileData || { username: "Неизвестный" }
-                };
-
-                setAnswers([newAnswerWithProfile, ...answers]);
+                setAnswers([data[0], ...answers]);
                 setNewAnswer('');
                 setShowAddAnswerModal(false);
                 toast({
