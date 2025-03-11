@@ -1,228 +1,112 @@
-
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { format } from 'date-fns';
-import { supabase } from "@/integrations/supabase/client";
-
-interface Profile {
-  username: string;
-  avatar: string | null;
-}
-
-interface Answer {
-  id: string;
-  created_at: string;
-  answer: string;
-  forum_id: string;
-  user_id: string;
-  profiles?: Profile | null;
-}
+import { useParams } from 'react-router-dom';
 
 const Answers = () => {
-  const { id } = useParams<{ id: string }>();
-  const [answers, setAnswers] = useState<Answer[]>([]);
-  const [newAnswer, setNewAnswer] = useState('');
-  const [forumTitle, setForumTitle] = useState('');
-  const { toast } = useToast();
-  const [user, setUser] = useState<any | null>(null);
+    const { id } = useParams<{ id: string }>(); // Получаем ID вопроса из URL
+    const [answers, setAnswers] = useState([]);
+    const [newAnswer, setNewAnswer] = useState('');
+    const [showAddAnswerModal, setShowAddAnswerModal] = useState(false);
+    const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
+    const userId = localStorage.getItem('userId');
+    const token = localStorage.getItem('token');
 
-    fetchUser();
-  }, []);
-
-  useEffect(() => {
-    if (!id) {
-      console.error("Forum ID is missing.");
-      return;
-    }
-
+    // Загрузка ответов с сервера
     const fetchAnswers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('answers')
-          .select(`
-            id,
-            created_at,
-            answer,
-            forum_id,
-            user_id,
-            profiles (
-              username,
-              avatar
-            )
-          `)
-          .eq('forum_id', id)
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          console.error("Error fetching answers:", error);
+        try {
+            const response = await fetch(`http://localhost:5000/forums/${id}/answers`);
+            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+            const data = await response.json();
+            setAnswers(data);
+        } catch (error) {
+            console.error('Ошибка при загрузке ответов:', error);
+            toast({ title: "Ошибка", description: "Не удалось загрузить ответы.", variant: "destructive" });
         }
-
-        if (data) {
-          setAnswers(data as Answer[]);
-        }
-      } catch (error) {
-        console.error("Error fetching answers:", error);
-      }
     };
 
-    const fetchForumTitle = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('forums')
-          .select('title')
-          .eq('id', id)
-          .single();
+    useEffect(() => {
+        fetchAnswers();
+    }, [id]);
 
-        if (error) {
-          console.error("Error fetching forum title:", error);
+    // Добавление ответа
+    const addAnswer = async () => {
+        if (!newAnswer.trim()) {
+            toast({ title: "Ошибка", description: "Ответ не может быть пустым.", variant: "destructive" });
+            return;
         }
 
-        if (data) {
-          setForumTitle(data.title);
+        if (!token || !userId) {
+            toast({ title: "Ошибка", description: "Вы не авторизованы.", variant: "destructive" });
+            return;
         }
-      } catch (error) {
-        console.error("Error fetching forum title:", error);
-      }
+
+        try {
+            const response = await fetch(`http://localhost:5000/forums/${id}/answers`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    answer: newAnswer,
+                    user_id: userId,
+                }),
+            });
+
+            if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
+
+            const newAnswerFromDB = await response.json();
+            setAnswers((prev) => [...prev, newAnswerFromDB]);
+            setNewAnswer('');
+            setShowAddAnswerModal(false);
+        } catch (error) {
+            console.error('Ошибка при добавлении ответа:', error);
+        }
     };
 
-    fetchAnswers();
-    fetchForumTitle();
-  }, [id]);
+    return (
+        <div className="container mx-auto px-4 py-8">
+            <h2 className="text-3xl font-bold mb-6">Ответы на вопрос</h2>
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!newAnswer.trim()) {
-      toast({
-        title: "Ошибка",
-        description: "Ответ не может быть пустым.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user) {
-      toast({
-        title: "Ошибка",
-        description: "Вы должны быть авторизованы, чтобы оставить ответ.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('answers')
-        .insert([
-          {
-            answer: newAnswer,
-            forum_id: id,
-            user_id: user.id,
-          },
-        ])
-        .select(`
-          id,
-          created_at,
-          answer,
-          forum_id,
-          user_id,
-          profiles (
-            username,
-            avatar
-          )
-        `)
-        .single();
-
-      if (error) {
-        console.error("Error submitting answer:", error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось отправить ответ.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (data) {
-        const newAnswerWithProfile = data as unknown as Answer;
-        setAnswers([newAnswerWithProfile, ...answers]);
-        setNewAnswer('');
-        toast({
-          title: "Успех",
-          description: "Ответ успешно отправлен.",
-        });
-      }
-    } catch (error) {
-      console.error("Error submitting answer:", error);
-      toast({
-        title: "Ошибка",
-        description: "Не удалось отправить ответ.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  return (
-    <div className="container mx-auto p-4">
-      <Card className="w-full max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">{forumTitle}</CardTitle>
-          <CardDescription>Ответы на вопрос</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-2">
-            <div className="space-y-1">
-              <Label htmlFor="answer">Ваш ответ</Label>
-              <Textarea
-                id="answer"
-                placeholder="Напишите свой ответ..."
-                value={newAnswer}
-                onChange={(e) => setNewAnswer(e.target.value)}
-                required
-              />
+            <div className="grid gap-4">
+                {answers.length > 0 ? (
+                    answers.map((answer) => (
+                        <Card key={answer.id} className="w-full">
+                            <CardHeader>
+                                <CardTitle>Ответ</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <p>{answer.answer}</p>
+                                <p className="text-sm text-gray-500">Автор: {answer.user || "Неизвестный"}</p>
+                            </CardContent>
+                        </Card>
+                    ))
+                ) : (
+                    <p>Ответов пока нет.</p>
+                )}
             </div>
-            <Button type="submit" className="w-full">
-              Отправить ответ
-            </Button>
-          </form>
 
-          <div className="mt-6">
-            <h3 className="text-xl font-semibold mb-3">Все ответы:</h3>
-            {answers.map((item) => (
-              <div key={item.id} className="border-b border-gray-200 pb-4 mb-4">
-                <div className="flex items-center mb-2">
-                  <Avatar className="h-6 w-6 mr-2">
-                    {item.profiles && item.profiles.avatar ? (
-                      <AvatarImage src={item.profiles.avatar} alt={item.profiles?.username || 'User'} />
-                    ) : (
-                      <AvatarFallback>{item.profiles?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-                    )}
-                  </Avatar>
-                  <span className="text-sm font-medium">{item.profiles?.username || 'Пользователь'}</span>
-                  <span className="text-xs text-gray-500 ml-2">
-                    {format(new Date(item.created_at), 'dd.MM.yyyy HH:mm')}
-                  </span>
-                </div>
-                <p className="text-gray-700">{item.answer}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+            <Button className="mt-6" onClick={() => setShowAddAnswerModal(true)}>Добавить ответ</Button>
+
+            {/* Модальное окно для добавления ответа */}
+            <Dialog open={showAddAnswerModal} onOpenChange={setShowAddAnswerModal}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Добавить ответ</DialogTitle>
+                    </DialogHeader>
+                    <Textarea value={newAnswer} onChange={(e) => setNewAnswer(e.target.value)} required />
+                    <DialogFooter>
+                        <Button onClick={addAnswer}>Отправить</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
 };
 
 export default Answers;

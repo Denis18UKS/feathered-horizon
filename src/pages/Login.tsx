@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -6,17 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, Mail } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/pages/AuthContext";
+import { useAuth } from "@/pages/AuthContext"; // Импортируем useAuth
 
 const Login = () => {
-  const { login } = useAuth();
+  const { setIsAuthenticated, login } = useAuth(); // Получаем login из контекста
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showBlockedAlert, setShowBlockedAlert] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
-  const [showNotConfirmedAlert, setShowNotConfirmedAlert] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -24,34 +22,51 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      await login(email, password);
-      
-      setShowSuccessAlert(true);
-      toast({
-        title: "Успешный вход",
-        description: "Добро пожаловать!",
+      const response = await fetch("http://localhost:5000/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
       });
-      
-      // Navigation will be handled by the auth state change listener in AuthContext
-    } catch (err: any) {
-      console.error(err);
-      
-      if (err.message?.includes("blocked")) {
-        setShowBlockedAlert(true);
-      } else if (err.message?.includes("Email not confirmed")) {
-        setShowNotConfirmedAlert(true);
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Используем метод login из контекста
+        login(data.token, data.user.role);
+
+        setShowSuccessAlert(true);
         toast({
-          title: "Почта не подтверждена",
-          description: "Пожалуйста, проверьте почту и подтвердите ваш email",
-          variant: "destructive",
+          title: "Успешный вход",
+          description: "Добро пожаловать!",
         });
+
+        // После успешного входа сразу перенаправляем пользователя
+        setIsAuthenticated(true); // Это теперь делается через контекст
+        if (data.user.role === "admin") {
+          navigate("/admin/users");
+        } else {
+          navigate("/profile");
+        }
       } else {
-        toast({
-          title: "Ошибка",
-          description: err.message || "Ошибка при входе",
-          variant: "destructive",
-        });
+        if (data.message === "Ваш аккаунт заблокирован!") {
+          setShowBlockedAlert(true);
+        } else {
+          toast({
+            title: "Ошибка",
+            description: data.message,
+            variant: "destructive",
+          });
+        }
       }
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Ошибка",
+        description: "Ошибка при отправке данных на сервер",
+        variant: "destructive",
+      });
     }
   };
 
@@ -93,27 +108,7 @@ const Login = () => {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex justify-center">
-          <Button variant="link" onClick={() => navigate("/register")}>
-            Нет аккаунта? Зарегистрироваться
-          </Button>
-        </CardFooter>
       </Card>
-
-      {showNotConfirmedAlert && (
-        <Alert className="fixed top-4 right-4 w-96 bg-amber-50 border-amber-200">
-          <Mail className="h-4 w-4 text-amber-600" />
-          <AlertTitle className="text-amber-800">Подтвердите вашу почту</AlertTitle>
-          <AlertDescription className="mt-2 text-amber-700">
-            <p>Вам необходимо подтвердить вашу почту, перейдя по ссылке в письме. Проверьте ваш почтовый ящик.</p>
-            <div className="mt-4 flex space-x-4">
-              <Button onClick={() => setShowNotConfirmedAlert(false)} variant="outline" className="border-amber-300">
-                Понятно
-              </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {showBlockedAlert && (
         <Alert variant="destructive" className="fixed top-4 right-4 w-96">

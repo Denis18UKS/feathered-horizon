@@ -1,151 +1,230 @@
-
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/pages/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
 
 interface FriendRequest {
-  id: string;
-  created_at: string;
-  sender_id: string;
-  receiver_id: string;
-  status: string;
-  sender_profile?: {
-    id: string;
-    username: string;
-    avatar: string | null;
-  } | null;
+    id: number;
+    user_id: number;
+    friend_id: number;
+    status: string;
+    created_at: string;
+    friend: {
+        username: string;
+        avatar: string | null;
+    };
+    sender: {
+        username: string;
+        avatar: string | null;
+    };
 }
 
 const FriendRequests = () => {
-  const { user } = useAuth();
-  const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+    const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const { toast } = useToast();
+    const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchFriendRequests = async () => {
-      if (user) {
+    useEffect(() => {
+        const fetchFriendRequests = async () => {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                console.error("Нет токена!");
+                setIsLoading(false);
+                setError("Вы не авторизованы. Пожалуйста, войдите в систему.");
+                return;
+            }
+
+            try {
+                const decodedToken = JSON.parse(atob(token.split('.')[1])); // Декодируем JWT
+                console.log("Ваш user_id:", decodedToken.id);
+                const currentUserId = decodedToken.id;
+
+                const response = await fetch("http://localhost:5000/friend-requests", {
+                    headers: { "Authorization": `Bearer ${token}` },
+                });
+
+                if (response.status === 500) {
+                    // Специальная обработка для ошибки 500 (отсутствие таблицы в БД)
+                    setError("Функция друзей временно недоступна. Обратитесь к администратору.");
+                    setIsLoading(false);
+                    return;
+                }
+
+                if (!response.ok) throw new Error(`Ошибка: ${response.status}`);
+
+                const data = await response.json();
+                console.log("Ответ сервера:", data);
+
+                if (!Array.isArray(data)) {
+                    throw new Error("Неверная структура данных");
+                }
+
+                // Формируем список заявок и отфильтровываем свой аккаунт
+                const formattedRequests = data
+                    .filter(req => req.user_id !== currentUserId) // Исключаем заявки от себя к себе
+                    .map((req, index) => ({
+                        id: index,
+                        user_id: req.user_id,
+                        friend_id: req.friend_id,
+                        status: req.status,
+                        created_at: req.created_at || "",
+                        friend: {
+                            username: req.friend_name || "", // Имя получателя (текущий пользователь)
+                            avatar: null,
+                        },
+                        sender: {
+                            username: req.user_name || "", // Имя отправителя
+                            avatar: req.avatar || null, // Аватар отправителя
+                        },
+                    }));
+
+                setFriendRequests(formattedRequests);
+                setIsLoading(false);
+            } catch (error) {
+                console.error("Ошибка загрузки заявок:", error);
+                setError("Не удалось загрузить заявки в друзья. Попробуйте позже.");
+                setIsLoading(false);
+                toast({
+                    title: "Ошибка",
+                    description: "Не удалось загрузить заявки",
+                    variant: "destructive",
+                });
+            }
+        };
+
+        fetchFriendRequests();
+    }, [toast]);
+
+    const handleAcceptRequest = async (friendId: number) => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+
         try {
-          const { data, error } = await supabase
-            .from("friends")
-            .select(`
-              id,
-              created_at,
-              friend_id,
-              user_id,
-              status,
-              profiles:friend_id (
-                id,
-                username,
-                avatar
-              )
-            `)
-            .eq("user_id", user.id)
-            .eq("status", "pending");
+            const response = await fetch(`http://localhost:5000/friend-requests/accept/${friendId}`, {
+                method: "PATCH",
+                headers: { "Authorization": `Bearer ${token}` },
+            });
 
-          if (error) {
-            console.error("Error fetching friend requests:", error);
-          }
+            if (!response.ok) throw new Error(`Ошибка принятия: ${response.status}`);
 
-          if (data) {
-            // Transform the data to match our FriendRequest interface
-            const transformedData = data.map(item => ({
-              id: item.id,
-              created_at: item.created_at,
-              sender_id: item.friend_id,
-              receiver_id: user.id,
-              status: item.status,
-              sender_profile: item.profiles
-            }));
-            
-            setFriendRequests(transformedData);
-          }
+            // Обновляем локальное состояние без перезагрузки страницы
+            setFriendRequests(prev => prev.filter(req => req.user_id !== friendId));
+            toast({
+                title: "Заявка принята",
+                description: "Вы стали друзьями!",
+                variant: "default",
+            });
         } catch (error) {
-          console.error("Error fetching friend requests:", error);
+            console.error("Ошибка принятия заявки:", error);
+            toast({
+                title: "Ошибка",
+                description: "Не удалось принять заявку",
+                variant: "destructive",
+            });
         }
-      }
     };
 
-    fetchFriendRequests();
-  }, [user]);
+    const handleRejectRequest = async (friendId: number) => {
+        const token = localStorage.getItem("token");
+        if (!token) return;
 
-  const handleAccept = async (requestId: string) => {
-    try {
-      const { error } = await supabase
-        .from("friends")
-        .update({ status: "accepted" })
-        .eq("id", requestId);
+        try {
+            const response = await fetch(`http://localhost:5000/friend-requests/reject/${friendId}`, {
+                method: "PATCH",
+                headers: { "Authorization": `Bearer ${token}` },
+            });
 
-      if (error) {
-        console.error("Error accepting friend request:", error);
-      } else {
-        setFriendRequests(friendRequests.filter((request) => request.id !== requestId));
-      }
-    } catch (error) {
-      console.error("Error accepting friend request:", error);
+            if (!response.ok) throw new Error(`Ошибка отклонения: ${response.status}`);
+
+            // Обновляем локальное состояние без перезагрузки страницы
+            setFriendRequests(prev => prev.filter(req => req.user_id !== friendId));
+            toast({
+                title: "Заявка отклонена",
+                description: "Вы отклонили заявку на дружбу.",
+                variant: "destructive",
+            });
+        } catch (error) {
+            console.error("Ошибка отклонения заявки:", error);
+            toast({
+                title: "Ошибка",
+                description: "Не удалось отклонить заявку",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const goBackToProfile = () => {
+        navigate("/profile");
+    };
+
+    if (isLoading) {
+        return (
+            <div className="container mx-auto px-4 py-8 flex justify-center items-center h-64">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Загрузка заявок...</p>
+                </div>
+            </div>
+        );
     }
-  };
 
-  const handleReject = async (requestId: string) => {
-    try {
-      const { error } = await supabase
-        .from("friends")
-        .update({ status: "rejected" })
-        .eq("id", requestId);
-
-      if (error) {
-        console.error("Error rejecting friend request:", error);
-      } else {
-        setFriendRequests(friendRequests.filter((request) => request.id !== requestId));
-      }
-    } catch (error) {
-      console.error("Error rejecting friend request:", error);
+    if (error) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Заявки в друзья</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-col items-center text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                            <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
+                            <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+                            <Button onClick={goBackToProfile}>Назад в профиль</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
     }
-  };
 
-  return (
-    <div className="container mx-auto p-4">
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Запросы в друзья</CardTitle>
-          <CardDescription>Здесь вы можете принимать или отклонять запросы в друзья</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {friendRequests.length === 0 ? (
-            <div>Нет входящих запросов в друзья.</div>
-          ) : (
-            friendRequests.map((request) => (
-              <div key={request.id} className="flex items-center justify-between p-3 border-b">
-                <div className="flex items-center">
-                  <Avatar className="h-10 w-10 mr-3">
-                    {request.sender_profile && request.sender_profile.avatar ? (
-                      <AvatarImage src={request.sender_profile.avatar} alt={request.sender_profile?.username || 'User'} />
+    return (
+        <div className="container mx-auto px-4 py-8 space-y-8">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Заявки в друзья</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {friendRequests.length === 0 ? (
+                        <p className="text-muted-foreground">Нет заявок</p>
                     ) : (
-                      <AvatarFallback>{request.sender_profile?.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                        <ul className="space-y-4">
+                            {friendRequests.map((request) => (
+                                <li key={request.id} className="flex items-center justify-between border-b pb-2">
+                                    <div className="flex items-center">
+                                        <span>{request.sender.username}</span>
+                                    </div>
+                                    <div className="flex space-x-2">
+                                        <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.user_id)}>
+                                            Принять
+                                        </Button>
+                                        <Button size="sm" variant="outline" onClick={() => handleRejectRequest(request.user_id)}>
+                                            Отклонить
+                                        </Button>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
                     )}
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{request.sender_profile?.username || 'Пользователь'}</p>
-                    <p className="text-xs text-gray-500">{format(new Date(request.created_at), 'dd.MM.yyyy')}</p>
-                  </div>
-                </div>
-                <div>
-                  <Button size="sm" onClick={() => handleAccept(request.id)} className="mr-2">
-                    Принять
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleReject(request.id)}>
-                    Отклонить
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+
+                    <Button onClick={goBackToProfile} className="mt-4">Назад в профиль</Button>
+                </CardContent>
+            </Card>
+        </div>
+    );
 };
 
 export default FriendRequests;
