@@ -18,50 +18,52 @@ import {
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "./AuthContext";
-import { useToast } from "@/components/ui/use-toast";
-import { formatDistance } from "date-fns";
-import { ru } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 interface User {
   id: string;
   username: string;
   email: string;
-  ip_address: string;
-  location: string;
+  ip_address: string | null;
+  location: string | null;
   created_at: string;
   last_login: string;
 }
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([]);
   const isMobile = useIsMobile();
+  const { isAuthenticated, role } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchUsers = async () => {
+      if (!isAuthenticated || role !== 'admin') {
+        toast({
+          title: "Доступ запрещен",
+          description: "У вас нет прав для просмотра этой страницы",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*');
+          .select('*')
+          .order('created_at', { ascending: false });
 
         if (error) {
           throw error;
         }
 
-        // Transform data to match the User interface
-        const formattedUsers = data.map(user => ({
-          id: user.id,
-          username: user.username || 'No Username',
-          email: user.email || 'No Email',
-          ip_address: user.ip_address || 'Unknown',
-          location: user.location || 'Unknown',
-          created_at: user.created_at || new Date().toISOString(),
-          last_login: user.last_login || 'Never'
-        }));
-
-        setUsers(formattedUsers);
+        setUsers(data || []);
       } catch (error) {
         console.error("Error fetching users:", error);
         toast({
@@ -69,11 +71,13 @@ export default function AdminUsers() {
           description: "Не удалось загрузить пользователей",
           variant: "destructive"
         });
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchUsers();
-  }, [toast]);
+  }, [isAuthenticated, role]);
 
   const columns = [
     {
@@ -88,18 +92,22 @@ export default function AdminUsers() {
       {
         accessorKey: "ip_address",
         header: "IP адрес",
+        cell: ({ row }: { row: any }) => row.original.ip_address || "Не указан"
       },
       {
         accessorKey: "location",
         header: "Местоположение",
+        cell: ({ row }: { row: any }) => row.original.location || "Не указано"
       },
       {
         accessorKey: "created_at",
         header: "Дата регистрации",
+        cell: ({ row }: { row: any }) => new Date(row.original.created_at).toLocaleDateString()
       },
       {
         accessorKey: "last_login",
         header: "Последний вход",
+        cell: ({ row }: { row: any }) => new Date(row.original.last_login).toLocaleDateString()
       },
     ] : []),
   ];
@@ -115,6 +123,23 @@ export default function AdminUsers() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || role !== 'admin') {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <h2 className="text-2xl font-bold mb-4">Доступ запрещен</h2>
+        <p>У вас нет прав для просмотра этой страницы.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full overflow-x-auto">

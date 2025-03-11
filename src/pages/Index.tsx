@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { format } from "date-fns";
-import { supabase } from "./AuthContext";
 
 interface Post {
   id: number;
@@ -48,74 +46,30 @@ const Index = () => {
   });
 
   useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('news')
-          .select(`
-            *,
-            profiles:user_id (username)
-          `)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        const formattedNews = data.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description,
-          image_url: item.image_url,
-          user: item.profiles?.username || 'Unknown User',
-          created_at: item.created_at,
-          link: item.link
-        }));
-
-        setNews(formattedNews);
-      } catch (error) {
+    fetch("http://localhost:5000/news")
+      .then((response) => response.json())
+      .then(setNews)
+      .catch((error) => {
         console.error("Error loading news:", error);
         toast({
           title: "Ошибка",
           description: "Не удалось загрузить новости. Попробуйте позже.",
           variant: "destructive",
         });
-      }
-    };
+      });
 
-    const fetchPosts = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('posts')
-          .select(`
-            *,
-            profiles:user_id (username)
-          `)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        const formattedPosts = data.map(item => ({
-          id: item.id,
-          title: item.title,
-          description: item.description,
-          image_url: item.image_url,
-          user: item.profiles?.username || 'Unknown User',
-          created_at: item.created_at
-        }));
-
-        setPosts(formattedPosts);
-      } catch (error) {
+    fetch("http://localhost:5000/posts")
+      .then((response) => response.json())
+      .then(setPosts)
+      .catch((error) => {
         console.error("Error loading posts:", error);
         toast({
           title: "Ошибка",
           description: "Не удалось загрузить посты. Попробуйте позже.",
           variant: "destructive",
         });
-      }
-    };
-
-    fetchNews();
-    fetchPosts();
-  }, [toast]);
+      });
+  }, []);
 
   const submitNewsForm = async () => {
     if (!newsForm.title || !newsForm.description || !newsForm.link) {
@@ -128,83 +82,39 @@ const Index = () => {
     }
 
     setLoading(true);
+    const formData = new FormData();
+    formData.append("title", newsForm.title);
+    formData.append("description", newsForm.description);
+    formData.append("link", newsForm.link);
+    if (newsForm.file) {
+      formData.append("file", newsForm.file);
+    }
 
     try {
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("Не авторизован");
-      }
-
-      let image_url = null;
-
-      // If there's a file, upload it to storage
-      if (newsForm.file) {
-        const fileExt = newsForm.file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `news/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('images')
-          .upload(filePath, newsForm.file);
-
-        if (uploadError) throw uploadError;
-
-        // Get the public URL
-        const { data: urlData } = supabase.storage
-          .from('images')
-          .getPublicUrl(filePath);
-
-        image_url = urlData.publicUrl;
-      }
-
-      // Insert the news into the database
-      const { data, error } = await supabase
-        .from('news')
-        .insert([
-          {
-            title: newsForm.title,
-            description: newsForm.description,
-            link: newsForm.link,
-            image_url,
-            user_id: user.id
-          }
-        ])
-        .select();
-
-      if (error) throw error;
-
-      toast({
-        title: "Успех",
-        description: "Новость успешно добавлена",
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/news", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      // Reset form
-      setNewsForm({ title: "", description: "", image_url: "", link: "", file: null });
-
-      // Refresh news
-      const { data: newsData, error: newsError } = await supabase
-        .from('news')
-        .select(`
-          *,
-          profiles:user_id (username)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (newsError) throw newsError;
-
-      const formattedNews = newsData.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        image_url: item.image_url,
-        user: item.profiles?.username || 'Unknown User',
-        created_at: item.created_at,
-        link: item.link
-      }));
-
-      setNews(formattedNews);
+      if (response.ok) {
+        toast({
+          title: "Успех",
+          description: "Новость успешно добавлена",
+        });
+        setNewsForm({ title: "", description: "", image_url: "", link: "", file: null });
+        const newsData = await fetch("http://localhost:5000/news").then((res) => res.json());
+        setNews(newsData);
+      } else {
+        toast({
+          title: "Ошибка",
+          description: "Ошибка авторизации. Пожалуйста, войдите в систему.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error submitting news:", error);
       toast({
@@ -228,81 +138,38 @@ const Index = () => {
     }
 
     setLoading(true);
+    const formData = new FormData();
+    formData.append("title", postForm.title);
+    formData.append("description", postForm.description);
+    if (postForm.file) {
+      formData.append("file", postForm.file);
+    }
 
     try {
-      // Get the current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error("Не авторизован");
-      }
-
-      let image_url = null;
-
-      // If there's a file, upload it to storage
-      if (postForm.file) {
-        const fileExt = postForm.file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `posts/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('images')
-          .upload(filePath, postForm.file);
-
-        if (uploadError) throw uploadError;
-
-        // Get the public URL
-        const { data: urlData } = supabase.storage
-          .from('images')
-          .getPublicUrl(filePath);
-
-        image_url = urlData.publicUrl;
-      }
-
-      // Insert the post into the database
-      const { data, error } = await supabase
-        .from('posts')
-        .insert([
-          {
-            title: postForm.title,
-            description: postForm.description,
-            image_url,
-            user_id: user.id
-          }
-        ])
-        .select();
-
-      if (error) throw error;
-
-      toast({
-        title: "Успех",
-        description: "Пост успешно добавлен",
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/posts", {
+        method: "POST",
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
 
-      // Reset form
-      setPostForm({ title: "", description: "", image_url: "", file: null });
-
-      // Refresh posts
-      const { data: postsData, error: postsError } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles:user_id (username)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (postsError) throw postsError;
-
-      const formattedPosts = postsData.map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        image_url: item.image_url,
-        user: item.profiles?.username || 'Unknown User',
-        created_at: item.created_at
-      }));
-
-      setPosts(formattedPosts);
+      if (response.ok) {
+        toast({
+          title: "Успех",
+          description: "Пост успешно добавлен",
+        });
+        setPostForm({ title: "", description: "", image_url: "", file: null });
+        const postsData = await fetch("http://localhost:5000/posts").then((res) => res.json());
+        setPosts(postsData);
+      } else {
+        toast({
+          title: "Ошибка",
+          description: "Ошибка при добавлении поста",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error submitting post:", error);
       toast({
