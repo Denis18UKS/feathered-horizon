@@ -18,6 +18,10 @@ import {
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "./AuthContext";
+import { useToast } from "@/components/ui/use-toast";
+import { formatDistance } from "date-fns";
+import { ru } from "date-fns/locale";
 
 interface User {
   id: string;
@@ -33,26 +37,43 @@ export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://localhost:5000/admin/users", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setUsers(data);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*');
+
+        if (error) {
+          throw error;
         }
+
+        // Transform data to match the User interface
+        const formattedUsers = data.map(user => ({
+          id: user.id,
+          username: user.username || 'No Username',
+          email: user.email || 'No Email',
+          ip_address: user.ip_address || 'Unknown',
+          location: user.location || 'Unknown',
+          created_at: user.created_at || new Date().toISOString(),
+          last_login: user.last_login || 'Never'
+        }));
+
+        setUsers(formattedUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить пользователей",
+          variant: "destructive"
+        });
       }
     };
 
     fetchUsers();
-  }, []);
+  }, [toast]);
 
   const columns = [
     {

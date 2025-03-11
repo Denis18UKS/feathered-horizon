@@ -1,20 +1,18 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
+import { supabase } from "./AuthContext";
 
 interface FriendRequest {
-    id: number;
-    user_id: number;
-    friend_id: number;
+    id: string;
+    sender_id: string;
+    receiver_id: string;
     status: string;
     created_at: string;
-    friend: {
-        username: string;
-        avatar: string | null;
-    };
     sender: {
         username: string;
         avatar: string | null;
@@ -30,89 +28,76 @@ const FriendRequests = () => {
 
     useEffect(() => {
         const fetchFriendRequests = async () => {
-            const token = localStorage.getItem("token");
-            if (!token) {
-                console.error("Нет токена!");
-                setIsLoading(false);
-                setError("Вы не авторизованы. Пожалуйста, войдите в систему.");
-                return;
-            }
-
             try {
-                const decodedToken = JSON.parse(atob(token.split('.')[1])); // Декодируем JWT
-                console.log("Ваш user_id:", decodedToken.id);
-                const currentUserId = decodedToken.id;
-
-                const response = await fetch("http://localhost:5000/friend-requests", {
-                    headers: { "Authorization": `Bearer ${token}` },
-                });
-
-                if (response.status === 500) {
-                    // Специальная обработка для ошибки 500 (отсутствие таблицы в БД)
-                    setError("Функция друзей временно недоступна. Обратитесь к администратору.");
+                // Get current user
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (!user) {
+                    setError("Вы не авторизованы. Пожалуйста, войдите в систему.");
                     setIsLoading(false);
                     return;
                 }
 
-                if (!response.ok) throw new Error(`Ошибка: ${response.status}`);
+                // Get friend requests sent to the current user
+                const { data, error } = await supabase
+                    .from('friend_requests')
+                    .select(`
+                        id,
+                        sender_id,
+                        receiver_id,
+                        status,
+                        created_at,
+                        sender:profiles!sender_id (username, avatar)
+                    `)
+                    .eq('receiver_id', user.id)
+                    .eq('status', 'pending');
 
-                const data = await response.json();
-                console.log("Ответ сервера:", data);
+                if (error) throw error;
 
-                if (!Array.isArray(data)) {
-                    throw new Error("Неверная структура данных");
-                }
-
-                // Формируем список заявок и отфильтровываем свой аккаунт
-                const formattedRequests = data
-                    .filter(req => req.user_id !== currentUserId) // Исключаем заявки от себя к себе
-                    .map((req, index) => ({
-                        id: index,
-                        user_id: req.user_id,
-                        friend_id: req.friend_id,
-                        status: req.status,
-                        created_at: req.created_at || "",
-                        friend: {
-                            username: req.friend_name || "", // Имя получателя (текущий пользователь)
-                            avatar: null,
-                        },
+                if (data) {
+                    const formattedRequests = data.map(request => ({
+                        id: request.id,
+                        sender_id: request.sender_id,
+                        receiver_id: request.receiver_id,
+                        status: request.status,
+                        created_at: request.created_at,
                         sender: {
-                            username: req.user_name || "", // Имя отправителя
-                            avatar: req.avatar || null, // Аватар отправителя
-                        },
+                            username: request.sender?.username || 'Unknown User',
+                            avatar: request.sender?.avatar || null,
+                        }
                     }));
 
-                setFriendRequests(formattedRequests);
-                setIsLoading(false);
+                    setFriendRequests(formattedRequests);
+                }
             } catch (error) {
                 console.error("Ошибка загрузки заявок:", error);
                 setError("Не удалось загрузить заявки в друзья. Попробуйте позже.");
-                setIsLoading(false);
                 toast({
                     title: "Ошибка",
                     description: "Не удалось загрузить заявки",
                     variant: "destructive",
                 });
+            } finally {
+                setIsLoading(false);
             }
         };
 
         fetchFriendRequests();
     }, [toast]);
 
-    const handleAcceptRequest = async (friendId: number) => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
+    const handleAcceptRequest = async (requestId: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/friend-requests/accept/${friendId}`, {
-                method: "PATCH",
-                headers: { "Authorization": `Bearer ${token}` },
-            });
+            // Update the request status
+            const { error } = await supabase
+                .from('friend_requests')
+                .update({ status: 'accepted' })
+                .eq('id', requestId);
 
-            if (!response.ok) throw new Error(`Ошибка принятия: ${response.status}`);
+            if (error) throw error;
 
-            // Обновляем локальное состояние без перезагрузки страницы
-            setFriendRequests(prev => prev.filter(req => req.user_id !== friendId));
+            // Update local state
+            setFriendRequests(prev => prev.filter(req => req.id !== requestId));
+            
             toast({
                 title: "Заявка принята",
                 description: "Вы стали друзьями!",
@@ -128,20 +113,19 @@ const FriendRequests = () => {
         }
     };
 
-    const handleRejectRequest = async (friendId: number) => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
+    const handleRejectRequest = async (requestId: string) => {
         try {
-            const response = await fetch(`http://localhost:5000/friend-requests/reject/${friendId}`, {
-                method: "PATCH",
-                headers: { "Authorization": `Bearer ${token}` },
-            });
+            // Update the request status
+            const { error } = await supabase
+                .from('friend_requests')
+                .update({ status: 'rejected' })
+                .eq('id', requestId);
 
-            if (!response.ok) throw new Error(`Ошибка отклонения: ${response.status}`);
+            if (error) throw error;
 
-            // Обновляем локальное состояние без перезагрузки страницы
-            setFriendRequests(prev => prev.filter(req => req.user_id !== friendId));
+            // Update local state
+            setFriendRequests(prev => prev.filter(req => req.id !== requestId));
+            
             toast({
                 title: "Заявка отклонена",
                 description: "Вы отклонили заявку на дружбу.",
@@ -208,10 +192,10 @@ const FriendRequests = () => {
                                         <span>{request.sender.username}</span>
                                     </div>
                                     <div className="flex space-x-2">
-                                        <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.user_id)}>
+                                        <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.id)}>
                                             Принять
                                         </Button>
-                                        <Button size="sm" variant="outline" onClick={() => handleRejectRequest(request.user_id)}>
+                                        <Button size="sm" variant="outline" onClick={() => handleRejectRequest(request.id)}>
                                             Отклонить
                                         </Button>
                                     </div>

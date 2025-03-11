@@ -1,12 +1,20 @@
+
 import React, { createContext, useState, useContext, ReactNode, useEffect } from "react";
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase client setup
+const supabaseUrl = 'https://your-project-url.supabase.co';
+const supabaseKey = 'your-anon-key';
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Типы данных для состояния контекста
 interface AuthContextType {
     isAuthenticated: boolean;
     role: string | undefined;
     setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
-    login: (token: string, role: string) => void;
-    logout: () => void;
+    login: (email: string, password: string) => Promise<{ error: any | null, data: any | null }>;
+    register: (email: string, password: string, username: string, githubUsername: string) => Promise<{ error: any | null, data: any | null }>;
+    logout: () => Promise<void>;
 }
 
 // Контекст
@@ -18,36 +26,113 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [role, setRole] = useState<string | undefined>(undefined);
 
     // Логика входа
-    const login = (token: string, userRole: string) => {
-        localStorage.setItem("token", token);
-        localStorage.setItem("role", userRole);
-        setIsAuthenticated(true);
-        setRole(userRole);
+    const login = async (email: string, password: string) => {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (!error && data.user) {
+            // Получаем роль пользователя из метаданных или из профиля
+            const userRole = data.user.user_metadata?.role || 'user';
+            
+            setIsAuthenticated(true);
+            setRole(userRole);
+            
+            return { data, error: null };
+        }
+        
+        return { data: null, error };
+    };
+
+    // Регистрация нового пользователя
+    const register = async (email: string, password: string, username: string, githubUsername: string) => {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    username,
+                    github_username: githubUsername,
+                    role: 'user',
+                }
+            }
+        });
+
+        if (!error && data.user) {
+            // Создаем запись в таблице profiles
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .insert([
+                    {
+                        id: data.user.id,
+                        username,
+                        github_username: githubUsername,
+                        email,
+                    }
+                ]);
+
+            if (profileError) {
+                return { data: null, error: profileError };
+            }
+
+            return { data, error: null };
+        }
+        
+        return { data: null, error };
     };
 
     // Логика выхода
-    const logout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("role");
+    const logout = async () => {
+        await supabase.auth.signOut();
         setIsAuthenticated(false);
         setRole(undefined);
     };
 
     // Проверка состояния авторизации при монтировании компонента
     useEffect(() => {
-        const token = localStorage.getItem("token");
-        const userRole = localStorage.getItem("role");
-        
-        if (token) {
-            setIsAuthenticated(true);
-        }
-        if (userRole) {
-            setRole(userRole);
-        }
+        const checkSession = async () => {
+            const { data } = await supabase.auth.getSession();
+            
+            if (data.session) {
+                setIsAuthenticated(true);
+                
+                // Получаем роль из метаданных пользователя
+                const userRole = data.session.user.user_metadata?.role || 'user';
+                setRole(userRole);
+            }
+        };
+
+        checkSession();
+
+        // Слушаем изменения в состоянии авторизации
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                    setIsAuthenticated(true);
+                    const userRole = session.user.user_metadata?.role || 'user';
+                    setRole(userRole);
+                } else if (event === 'SIGNED_OUT') {
+                    setIsAuthenticated(false);
+                    setRole(undefined);
+                }
+            }
+        );
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
     }, []);
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, role, setIsAuthenticated, login, logout }}>
+        <AuthContext.Provider value={{ 
+            isAuthenticated, 
+            role, 
+            setIsAuthenticated, 
+            login, 
+            register,
+            logout 
+        }}>
             {children}
         </AuthContext.Provider>
     );
