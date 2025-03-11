@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDistance } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
 import { format } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 
 interface Post {
   id: number;
@@ -22,9 +24,33 @@ interface Post {
   link?: string;
 }
 
+const fetchNews = async (): Promise<Post[]> => {
+  try {
+    const response = await fetch("http://localhost:5000/news");
+    if (!response.ok) {
+      throw new Error("Failed to fetch news");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching news:", error);
+    return [];
+  }
+};
+
+const fetchPosts = async (): Promise<Post[]> => {
+  try {
+    const response = await fetch("http://localhost:5000/posts");
+    if (!response.ok) {
+      throw new Error("Failed to fetch posts");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    return [];
+  }
+};
+
 const Index = () => {
-  const [news, setNews] = useState<Post[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
   const [showMoreNews, setShowMoreNews] = useState(false);
   const [showMorePosts, setShowMorePosts] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -45,31 +71,25 @@ const Index = () => {
     file: null as File | null,
   });
 
-  useEffect(() => {
-    fetch("http://localhost:5000/news")
-      .then((response) => response.json())
-      .then(setNews)
-      .catch((error) => {
-        console.error("Error loading news:", error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось загрузить новости. Попробуйте позже.",
-          variant: "destructive",
-        });
-      });
+  const { 
+    data: news = [], 
+    isLoading: newsLoading,
+    error: newsError,
+  } = useQuery({
+    queryKey: ['news'],
+    queryFn: fetchNews,
+    retry: 1,
+  });
 
-    fetch("http://localhost:5000/posts")
-      .then((response) => response.json())
-      .then(setPosts)
-      .catch((error) => {
-        console.error("Error loading posts:", error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось загрузить посты. Попробуйте позже.",
-          variant: "destructive",
-        });
-      });
-  }, []);
+  const {
+    data: posts = [],
+    isLoading: postsLoading,
+    error: postsError, 
+  } = useQuery({
+    queryKey: ['posts'],
+    queryFn: fetchPosts,
+    retry: 1,
+  });
 
   const submitNewsForm = async () => {
     if (!newsForm.title || !newsForm.description || !newsForm.link) {
@@ -106,12 +126,11 @@ const Index = () => {
           description: "Новость успешно добавлена",
         });
         setNewsForm({ title: "", description: "", image_url: "", link: "", file: null });
-        const newsData = await fetch("http://localhost:5000/news").then((res) => res.json());
-        setNews(newsData);
       } else {
+        const errorData = await response.json();
         toast({
           title: "Ошибка",
-          description: "Ошибка авторизации. Пожалуйста, войдите в систему.",
+          description: errorData.message || "Ошибка добавления новости",
           variant: "destructive",
         });
       }
@@ -161,12 +180,11 @@ const Index = () => {
           description: "Пост успешно добавлен",
         });
         setPostForm({ title: "", description: "", image_url: "", file: null });
-        const postsData = await fetch("http://localhost:5000/posts").then((res) => res.json());
-        setPosts(postsData);
       } else {
+        const errorData = await response.json();
         toast({
           title: "Ошибка",
-          description: "Ошибка при добавлении поста",
+          description: errorData.message || "Ошибка добавления поста",
           variant: "destructive",
         });
       }
@@ -183,7 +201,7 @@ const Index = () => {
   };
 
   const renderCards = (items: Post[], showMore: boolean, type: "news" | "posts") => {
-    if (items.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return (
         <p className="text-muted-foreground text-center py-8">
           {type === "news" ? "Нет новостей" : "Нет постов"}
@@ -237,164 +255,179 @@ const Index = () => {
     ));
   };
 
+  const renderSection = (
+    title: string, 
+    items: Post[], 
+    isLoading: boolean, 
+    error: unknown, 
+    showMore: boolean, 
+    setShowMore: React.Dispatch<React.SetStateAction<boolean>>, 
+    dialogTitle: string,
+    dialogDesc: string,
+    formFields: JSX.Element,
+    submitForm: () => Promise<void>,
+    type: "news" | "posts"
+  ) => (
+    <section>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold">{title}</h2>
+        <Dialog>
+          <DialogTrigger asChild>
+            <LiquidButton
+              text={`+ Добавить ${type === "news" ? "новость" : "пост"}`}
+              color1="#9b87f5"
+              color2="#6E59A5"
+              color3="#8F17E1"
+              width={200}
+              height={50}
+            />
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{dialogTitle}</DialogTitle>
+              <DialogDescription>
+                {dialogDesc}
+              </DialogDescription>
+            </DialogHeader>
+            {formFields}
+            <DialogFooter>
+              <Button onClick={submitForm} disabled={loading}>
+                {loading ? "Сохранение..." : "Сохранить"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : error ? (
+        <div className="text-center py-8 text-destructive">
+          <p>Ошибка загрузки данных. Попробуйте позже.</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {renderCards(items, showMore, type)}
+          </div>
+          {items.length > 3 && (
+            <div className="text-center mt-6">
+              <LiquidButton
+                text={showMore ? "Скрыть" : "Показать больше"}
+                color1="#9b87f5"
+                color2="#6E59A5"
+                color3="#8F17E1"
+                width={180}
+                height={40}
+                onClick={() => setShowMore(!showMore)}
+              />
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+
+  const newsFormFields = (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="title">Название</Label>
+        <Input
+          id="title"
+          value={newsForm.title}
+          onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="description">Описание</Label>
+        <Textarea
+          id="description"
+          value={newsForm.description}
+          onChange={(e) => setNewsForm({ ...newsForm, description: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="link">Ссылка</Label>
+        <Input
+          id="link"
+          value={newsForm.link}
+          onChange={(e) => setNewsForm({ ...newsForm, link: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="file">Изображение</Label>
+        <Input
+          id="file"
+          type="file"
+          accept="image/*"
+          onChange={(e) => setNewsForm({ ...newsForm, file: e.target.files?.[0] || null })}
+        />
+      </div>
+    </div>
+  );
+
+  const postFormFields = (
+    <div className="space-y-4">
+      <div>
+        <Label htmlFor="post-title">Название</Label>
+        <Input
+          id="post-title"
+          value={postForm.title}
+          onChange={(e) => setPostForm({ ...postForm, title: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="post-description">Описание</Label>
+        <Textarea
+          id="post-description"
+          value={postForm.description}
+          onChange={(e) => setPostForm({ ...postForm, description: e.target.value })}
+        />
+      </div>
+      <div>
+        <Label htmlFor="post-file">Изображение</Label>
+        <Input
+          id="post-file"
+          type="file"
+          accept="image/*"
+          onChange={(e) => setPostForm({ ...postForm, file: e.target.files?.[0] || null })}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="space-y-8">
-        <section>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold">Новости</h2>
-            <Dialog>
-              <DialogTrigger asChild>
-                <LiquidButton
-                  text="+ Добавить новость"
-                  color1="#9b87f5"
-                  color2="#6E59A5"
-                  color3="#8F17E1"
-                  width={200}
-                  height={50}
-                />
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Добавить новость</DialogTitle>
-                  <DialogDescription>
-                    Заполните форму для добавления новой новости
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="title">Название</Label>
-                    <Input
-                      id="title"
-                      value={newsForm.title}
-                      onChange={(e) => setNewsForm({ ...newsForm, title: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="description">Описание</Label>
-                    <Textarea
-                      id="description"
-                      value={newsForm.description}
-                      onChange={(e) => setNewsForm({ ...newsForm, description: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="link">Ссылка</Label>
-                    <Input
-                      id="link"
-                      value={newsForm.link}
-                      onChange={(e) => setNewsForm({ ...newsForm, link: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="file">Изображение</Label>
-                    <Input
-                      id="file"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setNewsForm({ ...newsForm, file: e.target.files?.[0] || null })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={submitNewsForm} disabled={loading}>
-                    {loading ? "Сохранение..." : "Сохранить"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {renderCards(news, showMoreNews, "news")}
-          </div>
-          {news.length > 3 && (
-            <div className="text-center mt-6">
-              <LiquidButton
-                text={showMoreNews ? "Скрыть" : "Показать больше"}
-                color1="#9b87f5"
-                color2="#6E59A5"
-                color3="#8F17E1"
-                width={180}
-                height={40}
-                onClick={() => setShowMoreNews(!showMoreNews)}
-              />
-            </div>
-          )}
-        </section>
+        {renderSection(
+          "Новости",
+          news,
+          newsLoading,
+          newsError,
+          showMoreNews,
+          setShowMoreNews,
+          "Добавить новость",
+          "Заполните форму для добавления новой новости",
+          newsFormFields,
+          submitNewsForm,
+          "news"
+        )}
 
-        <section>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-3xl font-bold">Посты</h2>
-            <Dialog>
-              <DialogTrigger asChild>
-                <LiquidButton
-                  text="+ Добавить пост"
-                  color1="#9b87f5"
-                  color2="#6E59A5"
-                  color3="#8F17E1"
-                  width={200}
-                  height={50}
-                />
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Добавить пост</DialogTitle>
-                  <DialogDescription>
-                    Заполните форму для добавления нового поста
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="post-title">Название</Label>
-                    <Input
-                      id="post-title"
-                      value={postForm.title}
-                      onChange={(e) => setPostForm({ ...postForm, title: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="post-description">Описание</Label>
-                    <Textarea
-                      id="post-description"
-                      value={postForm.description}
-                      onChange={(e) => setPostForm({ ...postForm, description: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="post-file">Изображение</Label>
-                    <Input
-                      id="post-file"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setPostForm({ ...postForm, file: e.target.files?.[0] || null })}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={submitPostForm} disabled={loading}>
-                    {loading ? "Сохранение..." : "Сохранить"}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {renderCards(posts, showMorePosts, "posts")}
-          </div>
-          {posts.length > 3 && (
-            <div className="text-center mt-6">
-              <LiquidButton
-                text={showMorePosts ? "Скрыть" : "Показать больше"}
-                color1="#9b87f5"
-                color2="#6E59A5"
-                color3="#8F17E1"
-                width={180}
-                height={40}
-                onClick={() => setShowMorePosts(!showMorePosts)}
-              />
-            </div>
-          )}
-        </section>
+        {renderSection(
+          "Посты",
+          posts,
+          postsLoading,
+          postsError,
+          showMorePosts,
+          setShowMorePosts,
+          "Добавить пост",
+          "Заполните форму для добавления нового поста",
+          postFormFields,
+          submitPostForm,
+          "posts"
+        )}
       </div>
     </div>
   );
