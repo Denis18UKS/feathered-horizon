@@ -3,8 +3,8 @@ import React, { createContext, useState, useContext, ReactNode, useEffect } from
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase client setup
-const supabaseUrl = 'https://your-project-url.supabase.co';
-const supabaseKey = 'your-anon-key';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project-url.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Типы данных для состояния контекста
@@ -13,7 +13,7 @@ interface AuthContextType {
     role: string | undefined;
     setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
     login: (email: string, password: string) => Promise<{ error: any | null, data: any | null }>;
-    register: (email: string, password: string, username: string, githubUsername: string) => Promise<{ error: any | null, data: any | null }>;
+    register: (email: string, password: string, username: string, githubUsername: string | null) => Promise<{ error: any | null, data: any | null }>;
     logout: () => Promise<void>;
 }
 
@@ -46,14 +46,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     // Регистрация нового пользователя
-    const register = async (email: string, password: string, username: string, githubUsername: string) => {
+    const register = async (email: string, password: string, username: string, githubUsername: string | null) => {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
                 data: {
                     username,
-                    github_username: githubUsername,
+                    github_username: githubUsername || '',
                     role: 'user',
                 }
             }
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     {
                         id: data.user.id,
                         username,
-                        github_username: githubUsername,
+                        github_username: githubUsername || '',
                         email,
                     }
                 ]);
