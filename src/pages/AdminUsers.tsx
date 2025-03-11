@@ -18,66 +18,41 @@ import {
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./AuthContext";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
 
 interface User {
   id: string;
   username: string;
   email: string;
-  ip_address: string | null;
-  location: string | null;
+  ip_address: string;
+  location: string;
   created_at: string;
   last_login: string;
 }
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([]);
   const isMobile = useIsMobile();
-  const { isAuthenticated, role } = useAuth();
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (!isAuthenticated || role !== 'admin') {
-        toast({
-          title: "Доступ запрещен",
-          description: "У вас нет прав для просмотра этой страницы",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          throw error;
+        const response = await fetch("http://localhost:5000/admin/users", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data);
         }
-
-        setUsers(data || []);
       } catch (error) {
         console.error("Error fetching users:", error);
-        toast({
-          title: "Ошибка",
-          description: "Не удалось загрузить пользователей",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchUsers();
-  }, [isAuthenticated, role]);
+  }, []);
 
   const columns = [
     {
@@ -92,22 +67,18 @@ export default function AdminUsers() {
       {
         accessorKey: "ip_address",
         header: "IP адрес",
-        cell: ({ row }: { row: any }) => row.original.ip_address || "Не указан"
       },
       {
         accessorKey: "location",
         header: "Местоположение",
-        cell: ({ row }: { row: any }) => row.original.location || "Не указано"
       },
       {
         accessorKey: "created_at",
         header: "Дата регистрации",
-        cell: ({ row }: { row: any }) => new Date(row.original.created_at).toLocaleDateString()
       },
       {
         accessorKey: "last_login",
         header: "Последний вход",
-        cell: ({ row }: { row: any }) => new Date(row.original.last_login).toLocaleDateString()
       },
     ] : []),
   ];
@@ -123,23 +94,6 @@ export default function AdminUsers() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || role !== 'admin') {
-    return (
-      <div className="container mx-auto py-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Доступ запрещен</h2>
-        <p>У вас нет прав для просмотра этой страницы.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="w-full overflow-x-auto">

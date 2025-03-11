@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,13 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./AuthContext";
-import { v4 as uuidv4 } from 'uuid';
 
 const EditProfile = () => {
   const [avatar, setAvatar] = useState<File | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [githubUsername, setGithubUsername] = useState("");
@@ -23,36 +18,35 @@ const EditProfile = () => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user) {
+      const token = localStorage.getItem("token");
+      if (!token) {
         setError("Пользователь не авторизован!");
-        setLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+        const response = await fetch("http://localhost:5000/profile", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-        if (error) {
-          throw error;
+        if (!response.ok) {
+          throw new Error("Ошибка при загрузке профиля");
         }
 
-        if (data) {
-          setEmail(data.email || "");
-          setUsername(data.username || "");
-          setGithubUsername(data.github_username || "");
-          setSkills(data.skills || "");
-          setAvatarUrl(data.avatar || null);
-        }
-      } catch (error: any) {
-        console.error("Error fetching profile:", error);
+        const data = await response.json();
+        const user = data.user;
+
+        setEmail(user.email || "");
+        setUsername(user.username || "");
+        setGithubUsername(user.github_username || "");
+        setSkills(user.skills || "");
+      } catch (error) {
         setError(error.message);
       } finally {
         setLoading(false);
@@ -60,72 +54,39 @@ const EditProfile = () => {
     };
 
     fetchProfile();
-  }, [user]);
-
-  const uploadAvatar = async () => {
-    if (!avatar || !user) {
-      return null;
-    }
-
-    const fileExt = avatar.name.split('.').pop();
-    const fileName = `${user.id}-${uuidv4()}.${fileExt}`;
-    const filePath = `avatars/${fileName}`;
-
-    try {
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, avatar);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      return data.publicUrl;
-    } catch (error) {
-      console.error("Error uploading avatar:", error);
-      return null;
-    }
-  };
+  }, []);
 
   const handleSave = async () => {
-    if (!user) {
+    const token = localStorage.getItem("token");
+    if (!token) {
       toast({ title: "Ошибка", description: "Не удалось сохранить профиль, пользователь не авторизован" });
       return;
     }
 
-    setLoading(true);
+    const formData = new FormData();
+    formData.append("avatar", avatar as Blob);
+    formData.append("username", username);
+    formData.append("github_username", githubUsername);
+    formData.append("skills", skills);
+    formData.append("email", email);
+
     try {
-      let newAvatarUrl = avatarUrl;
+      const response = await fetch("http://localhost:5000/profile/update", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-      if (avatar) {
-        newAvatarUrl = await uploadAvatar();
-      }
-
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          username,
-          github_username: githubUsername,
-          skills,
-          avatar: newAvatarUrl,
-        })
-        .eq('id', user.id);
-
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error("Ошибка при сохранении профиля");
       }
 
       toast({ title: "Успех", description: "Профиль обновлён" });
       navigate("/profile");
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
+    } catch (error) {
       toast({ title: "Ошибка", description: error.message });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -163,21 +124,15 @@ const EditProfile = () => {
                 <input 
                   type="file" 
                   onChange={handleAvatarChange} 
-                  accept="image/*"
+                  accept="image/*" // Ограничение на выбор изображений
                 />
-                {avatar ? (
+                {avatar && (
                   <img
                     src={URL.createObjectURL(avatar)}
                     alt="Аватар"
                     className="w-24 h-24 rounded-full object-cover border-2 border-primary/20"
                   />
-                ) : avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="Аватар"
-                    className="w-24 h-24 rounded-full object-cover border-2 border-primary/20"
-                  />
-                ) : null}
+                )}
               </div>
             </div>
 
