@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,66 +8,60 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/pages/AuthContext"; // Импортируем useAuth
+import { useAuth } from "@/pages/AuthContext";
+import { LiquidButton } from "@/components/ui/liquid-button";
 
 const Login = () => {
-  const { setIsAuthenticated, login } = useAuth(); // Получаем login из контекста
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showBlockedAlert, setShowBlockedAlert] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      // Use Supabase login from AuthContext instead of server call
+      const { data, error } = await login(email, password);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        // Используем метод login из контекста
-        login(data.token, data.user.role);
-
+      if (error) {
+        if (error.message.includes("blocked") || error.message.includes("banned")) {
+          setShowBlockedAlert(true);
+        } else {
+          toast({
+            title: "Ошибка входа",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      } else {
         setShowSuccessAlert(true);
         toast({
           title: "Успешный вход",
           description: "Добро пожаловать!",
         });
 
-        // После успешного входа сразу перенаправляем пользователя
-        setIsAuthenticated(true); // Это теперь делается через контекст
-        if (data.user.role === "admin") {
+        // Redirect based on user role
+        if (data?.user?.user_metadata?.role === "admin") {
           navigate("/admin/users");
         } else {
           navigate("/profile");
         }
-      } else {
-        if (data.message === "Ваш аккаунт заблокирован!") {
-          setShowBlockedAlert(true);
-        } else {
-          toast({
-            title: "Ошибка",
-            description: data.message,
-            variant: "destructive",
-          });
-        }
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Login error:', err);
       toast({
         title: "Ошибка",
-        description: "Ошибка при отправке данных на сервер",
+        description: err.message || "Произошла ошибка при входе",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -103,9 +98,17 @@ const Login = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Войти
-            </Button>
+            <LiquidButton 
+              text="Войти"
+              width={300}
+              height={50}
+              color1="#36DFE7"
+              color2="#8F17E1"
+              color3="#BF09E6"
+              textColor="#FFFFFF"
+              className="w-full mt-4"
+              onClick={handleLogin}
+            />
           </form>
         </CardContent>
       </Card>
