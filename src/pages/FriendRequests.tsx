@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +13,6 @@ interface FriendRequest {
     status: string;
     created_at: string;
     friend: {
-        username: string;
-        avatar: string | null;
-    };
-    sender: {
         username: string;
         avatar: string | null;
     };
@@ -73,12 +70,8 @@ const FriendRequests = () => {
                         status: req.status,
                         created_at: req.created_at || "",
                         friend: {
-                            username: req.friend_name || "", // Имя получателя (текущий пользователь)
-                            avatar: null,
-                        },
-                        sender: {
-                            username: req.user_name || "", // Имя отправителя
-                            avatar: req.avatar || null, // Аватар отправителя
+                            username: req.user_name || req.friend_name, // Используем имя отправителя
+                            avatar: req.avatar || null,
                         },
                     }));
 
@@ -204,8 +197,13 @@ const FriendRequests = () => {
                         <ul className="space-y-4">
                             {friendRequests.map((request) => (
                                 <li key={request.id} className="flex items-center justify-between border-b pb-2">
-                                    <div className="flex items-center">
-                                        <span>{request.sender.username}</span>
+                                    <div className="flex items-center space-x-4">
+                                        <img
+                                            src={request.friend.avatar ? `http://localhost:5000${request.friend.avatar}` : "/placeholder.svg"}
+                                            alt={request.friend.username}
+                                            className="w-12 h-12 rounded-full object-cover border border-gray-300"
+                                        />
+                                        <span>{request.friend.username}</span>
                                     </div>
                                     <div className="flex space-x-2">
                                         <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.user_id)}>

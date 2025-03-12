@@ -16,40 +16,10 @@ interface LiquidButtonProps {
 }
 
 class LiquidButtonAnimation {
-  private static id = 1;
-  private id: number;
-  private xmlns: string;
-  private tension: number;
-  private width: number;
-  private height: number;
-  private margin: number;
-  private hoverFactor: number;
-  private gap: number;
-  private debug: boolean;
-  private forceFactor: number;
-  private color1: string;
-  private color2: string;
-  private color3: string;
-  private textColor: string;
-  private text: string;
-  private svg: SVGSVGElement;
-  private layers: Array<{
-    points: Array<any>;
-    viscosity: number;
-    mouseForce: number;
-    forceLimit: number;
-    path?: SVGPathElement;
-  }>;
-  private wrapperElement: HTMLElement;
-  private svgText: SVGTextElement;
-  private svgDefs: SVGDefsElement;
-  private touches: Array<{x: number, y: number, force: number}>;
-  private noise: number;
-  private __raf: any;
-
-  constructor(svg: SVGSVGElement) {
-    const options = svg.dataset as any;
-    this.id = LiquidButtonAnimation.id++;
+  constructor(svg) {
+    const options = svg.dataset;
+    this.id = this.constructor.id || (this.constructor.id = 1);
+    this.constructor.id++;
     this.xmlns = 'http://www.w3.org/2000/svg';
     this.tension = options.tension * 1 || 0.4;
     this.width   = options.width   * 1 || 200;
@@ -93,7 +63,7 @@ class LiquidButtonAnimation {
     this.svgText.setAttribute('x', '50%');
     this.svgText.setAttribute('y', '50%');
     this.svgText.setAttribute('dy', ~~(this.height / 8) + 'px');
-    this.svgText.setAttribute('font-size', ~~(this.height / 3) + '');
+    this.svgText.setAttribute('font-size', ~~(this.height / 3));
     this.svgText.style.fontFamily = 'sans-serif';
     this.svgText.setAttribute('text-anchor', 'middle');
     this.svgText.setAttribute('pointer-events', 'none');
@@ -115,7 +85,7 @@ class LiquidButtonAnimation {
   }
 
   get mouseHandler() {
-    return (e: MouseEvent) => {
+    return (e) => {
       this.touches = [{
         x: e.offsetX,
         y: e.offsetY,
@@ -125,7 +95,7 @@ class LiquidButtonAnimation {
   }
 
   get touchHandler() {
-    return (e: TouchEvent) => {
+    return (e) => {
       this.touches = [];
       const rect = this.svg.getBoundingClientRect();
       for (let touchIndex = 0; touchIndex < e.changedTouches.length; touchIndex++) {
@@ -141,7 +111,7 @@ class LiquidButtonAnimation {
   }
 
   get clearHandler() {
-    return () => {
+    return (e) => {
       this.touches = [];
     };
   }
@@ -149,13 +119,13 @@ class LiquidButtonAnimation {
   get raf() {
     return this.__raf || (this.__raf = (
       window.requestAnimationFrame ||
-      (window as any).webkitRequestAnimationFrame ||
-      (window as any).mozRequestAnimationFrame ||
-      function(callback: FrameRequestCallback){ setTimeout(callback, 10)}
+      window.webkitRequestAnimationFrame ||
+      window.mozRequestAnimationFrame ||
+      function(callback){ setTimeout(callback, 10)}
     ).bind(window));
   }
 
-  distance(p1: {x: number, y: number}, p2: {x: number, y: number}) {
+  distance(p1, p2) {
     return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
   }
 
@@ -256,21 +226,19 @@ class LiquidButtonAnimation {
             gradient.appendChild(start);
             gradient.appendChild(stop);
             this.svgDefs.appendChild(gradient);
-            gradient.setAttribute('cx', (touch.x / this.svgWidth).toString());
-            gradient.setAttribute('cy', (touch.y / this.svgHeight).toString());
-            gradient.setAttribute('r', touch.force.toString());
-            if (layer.path) {
-              layer.path.style.fill = 'url(#' + gradient.id + ')';
-            }
+            gradient.setAttribute('cx', touch.x / this.svgWidth);
+            gradient.setAttribute('cy', touch.y / this.svgHeight);
+            gradient.setAttribute('r', touch.force);
+            layer.path.style.fill = 'url(#' + gradient.id + ')';
           }
-        } else if (layer.path) {
+        } else {
           layer.path.style.fill = this.color2;
         }
-      } else if (layer.path) {
+      } else {
         layer.path.style.fill = this.color1;
       }
       const points = layer.points;
-      const commands: (string | number)[] = [];
+      const commands = [];
       commands.push('M', points[0].x, points[0].y);
       for (let pointIndex = 1; pointIndex < points.length; pointIndex += 1) {
         commands.push('C',
@@ -283,15 +251,13 @@ class LiquidButtonAnimation {
         );
       }
       commands.push('Z');
-      if (layer.path) {
-        layer.path.setAttribute('d', commands.join(' '));
-      }
+      layer.path.setAttribute('d', commands.join(' '));
     }
     this.svgText.textContent = this.text;
     this.svgText.style.fill = this.textColor;
   }
 
-  createPoint(x: number, y: number) {
+  createPoint(x, y) {
     return {
       x: x,
       y: y,
@@ -303,8 +269,8 @@ class LiquidButtonAnimation {
   }
 
   initOrigins() {
-    this.svg.setAttribute('width', this.svgWidth.toString());
-    this.svg.setAttribute('height', this.svgHeight.toString());
+    this.svg.setAttribute('width', this.svgWidth);
+    this.svg.setAttribute('height', this.svgHeight);
     for (let layerIndex = 0; layerIndex < this.layers.length; layerIndex++) {
       const layer = this.layers[layerIndex];
       const points = [];
@@ -339,7 +305,18 @@ class LiquidButtonAnimation {
   }
 }
 
-export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProps>(({
+
+const redraw = () => {
+  button.initOrigins();
+};
+
+const buttons = document.getElementsByClassName('liquid-button');
+for (let buttonIndex = 0; buttonIndex < buttons.length; buttonIndex++) {
+  const button = buttons[buttonIndex];
+  button.liquidButton = new LiquidButton(button);
+}
+
+export const LiquidButton: React.FC<LiquidButtonProps> = ({
   text = "Click me",
   width = 200,
   height = 50,
@@ -349,7 +326,7 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
   textColor = '#FFFFFF',
   className = '',
   onClick
-}, ref) => {
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const buttonRef = useRef<any>(null);
   const isMobile = useIsMobile();
@@ -376,7 +353,6 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
   if (isMobile) {
     return (
       <Button 
-        ref={ref}
         onClick={onClick}
         className={className}
         style={{
@@ -398,6 +374,4 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
       onClick={onClick}
     />
   );
-});
-
-LiquidButton.displayName = "LiquidButton";
+};
