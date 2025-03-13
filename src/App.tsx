@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +14,7 @@ import MyProfile from "./pages/MyProfile";
 import EditProfile from "./pages/EditProfile";
 import Chats from "./pages/Chats";
 import Users from "./pages/Users";
+import UserProfilePage from "./pages/UsersProfiles";
 import Xakatons from "./pages/Xakatons";
 import FriendRequests from "./pages/FriendRequests";
 import Forum from "./pages/Forum";
@@ -50,6 +50,7 @@ const App = () => {
                       <Route path="/chats" element={<Chats />} />
                       <Route path="/chats/:chatId" element={<Chats />} />
                       <Route path="/users" element={<Users />} />
+                      <Route path="/users-profiles/:username" element={<UserProfilePage />} />
                       <Route path="/xakatons" element={<Xakatons />} />
                       <Route path="/friend-requests" element={<FriendRequests />} />
                       <Route path="/forum" element={<Forum />} />
