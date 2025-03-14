@@ -1,3 +1,75 @@
+При попытке отправить файл вместе с сообщением или без сообщения - пишет следующее:
+Chats.tsx:211 
+            
+            
+           POST http://localhost:5000/messages 400 (Bad Request)
+sendMessage @ Chats.tsx:211
+callCallback2 @ chunk-T2SWDQEL.js?v=0bf103c0:3674
+invokeGuardedCallbackDev @ chunk-T2SWDQEL.js?v=0bf103c0:3699
+invokeGuardedCallback @ chunk-T2SWDQEL.js?v=0bf103c0:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-T2SWDQEL.js?v=0bf103c0:3736
+executeDispatch @ chunk-T2SWDQEL.js?v=0bf103c0:7014
+processDispatchQueueItemsInOrder @ chunk-T2SWDQEL.js?v=0bf103c0:7034
+processDispatchQueue @ chunk-T2SWDQEL.js?v=0bf103c0:7043
+dispatchEventsForPlugins @ chunk-T2SWDQEL.js?v=0bf103c0:7051
+(anonymous) @ chunk-T2SWDQEL.js?v=0bf103c0:7174
+batchedUpdates$1 @ chunk-T2SWDQEL.js?v=0bf103c0:18913
+batchedUpdates @ chunk-T2SWDQEL.js?v=0bf103c0:3579
+dispatchEventForPluginEventSystem @ chunk-T2SWDQEL.js?v=0bf103c0:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-T2SWDQEL.js?v=0bf103c0:5478
+dispatchEvent @ chunk-T2SWDQEL.js?v=0bf103c0:5472
+dispatchDiscreteEvent @ chunk-T2SWDQEL.js?v=0bf103c0:5449Understand this errorAI
+Chats.tsx:226 Ошибка: Error: Ошибка при отправке сообщения
+    at sendMessage (Chats.tsx:219:41)
+sendMessage @ Chats.tsx:226
+await in sendMessage
+callCallback2 @ chunk-T2SWDQEL.js?v=0bf103c0:3674
+invokeGuardedCallbackDev @ chunk-T2SWDQEL.js?v=0bf103c0:3699
+invokeGuardedCallback @ chunk-T2SWDQEL.js?v=0bf103c0:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-T2SWDQEL.js?v=0bf103c0:3736
+executeDispatch @ chunk-T2SWDQEL.js?v=0bf103c0:7014
+processDispatchQueueItemsInOrder @ chunk-T2SWDQEL.js?v=0bf103c0:7034
+processDispatchQueue @ chunk-T2SWDQEL.js?v=0bf103c0:7043
+dispatchEventsForPlugins @ chunk-T2SWDQEL.js?v=0bf103c0:7051
+(anonymous) @ chunk-T2SWDQEL.js?v=0bf103c0:7174
+batchedUpdates$1 @ chunk-T2SWDQEL.js?v=0bf103c0:18913
+batchedUpdates @ chunk-T2SWDQEL.js?v=0bf103c0:3579
+dispatchEventForPluginEventSystem @ chunk-T2SWDQEL.js?v=0bf103c0:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-T2SWDQEL.js?v=0bf103c0:5478
+dispatchEvent @ chunk-T2SWDQEL.js?v=0bf103c0:5472
+dispatchDiscreteEvent @ chunk-T2SWDQEL.js?v=0bf103c0:5449Understand this errorAI
+Chats.tsx:211 
+            
+            
+           POST http://localhost:5000/messages 400 (Bad Request)
+sendMessage @ Chats.tsx:211
+callCallback2 @ chunk-T2SWDQEL.js?v=0bf103c0:3674
+invokeGuardedCallbackDev @ chunk-T2SWDQEL.js?v=0bf103c0:3699
+invokeGuardedCallback @ chunk-T2SWDQEL.js?v=0bf103c0:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-T2SWDQEL.js?v=0bf103c0:3736
+executeDispatch @ chunk-T2SWDQEL.js?v=0bf103c0:7014
+processDispatchQueueItemsInOrder @ chunk-T2SWDQEL.js?v=0bf103c0:7034
+processDispatchQueue @ chunk-T2SWDQEL.js?v=0bf103c0:7043
+dispatchEventsForPlugins @ chunk-T2SWDQEL.js?v=0bf103c0:7051
+(anonymous) @ chunk-T2SWDQEL.js?v=0bf103c0:7174
+batchedUpdates$1 @ chunk-T2SWDQEL.js?v=0bf103c0:18913
+batchedUpdates @ chunk-T2SWDQEL.js?v=0bf103c0:3579
+dispatchEventForPluginEventSystem @ chunk-T2SWDQEL.js?v=0bf103c0:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-T2SWDQEL.js?v=0bf103c0:5478
+dispatchEvent @ chunk-T2SWDQEL.js?v=0bf103c0:5472
+dispatchDiscreteEvent @ chunk-T2SWDQEL.js?v=0bf103c0:5449Understand this errorAI
+Chats.tsx:226 Ошибка: Error: Ошибка при отправке сообщения
+    at sendMessage (Chats.tsx:219:41)
+
+
+{message: "chatId или сообщение отсутствуют"}
+
+Но при этом ChatId передаётся в запросе:
+chatId: 43
+message: 123
+media: (binary)
+
+Вот мой Chats.tsx:
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
@@ -359,3 +431,219 @@ const Chats = () => {
 };
 
 export default Chats;
+
+и server.js:
+app.get('/chats', verifyToken, async (req, res) => {
+    const { id } = req.user;
+    try {
+        const [chats] = await db.query(
+            `SELECT c.id, u1.username AS user1, u2.username AS user2, c.created_at
+            FROM chats c
+            JOIN users u1 ON c.user_id_1 = u1.id
+            JOIN users u2 ON c.user_id_2 = u2.id
+            WHERE c.user_id_1 = ? OR c.user_id_2 = ?`,
+            [id, id]
+        );
+        res.json(chats);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Ошибка при получении чатов' });
+    }
+});
+
+// Чаты и сообщения
+app.post('/messages', verifyToken, async (req, res) => {
+    const { chatId, message } = req.body;
+    const { id: userId } = req.user;  // Получаем ID текущего пользователя
+
+    // Проверяем, что chatId и message не пустые
+    if (!chatId || !message) {
+        return res.status(400).json({ message: "chatId или сообщение отсутствуют" });
+    }
+
+    try {
+        // Обработка медиафайлов, если они есть
+        let mediaUrl = null;
+        if (req.files && req.files.media) {
+            // Сохраняем файл и получаем URL (реализуйте сохранение файла)
+            const media = req.files.media;
+            mediaUrl = `/uploads/${media.name}`;  // Путь к файлу
+            // Сохраните файл в нужную папку на сервере
+            await media.mv(`./uploads/${media.name}`);
+        }
+
+        // Сохраняем сообщение в базе данных
+        const [result] = await db.query(
+            `INSERT INTO messages (chat_id, user_id, message, media) VALUES (?, ?, ?, ?)`,
+            [chatId, userId, message, mediaUrl]
+        );
+
+        // Получаем данные о только что добавленном сообщении
+        const [newMessage] = await db.query(
+            `SELECT m.id, m.chat_id, m.user_id, m.message, m.created_at, u.username
+            FROM messages m
+            JOIN users u ON m.user_id = u.id
+            WHERE m.id = ?`,
+            [result.insertId]
+        );
+
+        res.status(200).json(newMessage[0]);  // Возвращаем добавленное сообщение
+    } catch (error) {
+        console.error('Ошибка при добавлении сообщения:', error);
+        res.status(500).json({ message: "Ошибка сервера" });
+    }
+});
+
+
+
+app.get('/messages/:chatId', verifyToken, async (req, res) => {
+    const { chatId } = req.params;
+    try {
+        const [messages] = await db.query(
+            'SELECT m.*, u.username FROM messages m JOIN users u ON m.user_id = u.id WHERE m.chat_id = ? ORDER BY m.created_at',
+            [chatId]
+        );
+        console.log(messages); // Логирование сообщений
+        res.json(messages);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Ошибка при получении сообщений' });
+    }
+});
+
+app.post('/chats', verifyToken, async (req, res) => {
+    const { userId2 } = req.body;
+    const { id: userId1 } = req.user;
+
+    try {
+        const [existingChat] = await db.query(
+            'SELECT * FROM chats WHERE (user_id_1 = ? AND user_id_2 = ?) OR (user_id_1 = ? AND user_id_2 = ?)',
+            [userId1, userId2, userId2, userId1]
+        );
+
+        if (existingChat.length > 0) {
+            return res.status(200).json(existingChat[0]);
+        }
+
+        const [result] = await db.query(
+            'INSERT INTO chats (user_id_1, user_id_2) VALUES (?, ?)',
+            [userId1, userId2]
+        );
+
+        res.status(201).json({ id: result.insertId });
+    } catch (err) {
+        console.error('Ошибка при создании чата:', err);
+        res.status(500).json({ message: 'Ошибка при создании чата' });
+    }
+});
+
+
+// Удаление сообщения
+app.delete('/messages/:messageId', verifyToken, async (req, res) => {
+    const { messageId } = req.params;
+    const userId = req.user.id;
+
+    try {
+        // Проверяем, что сообщение принадлежит пользователю
+        const [message] = await db.query(
+            'SELECT * FROM messages WHERE id = ? AND user_id = ?',
+            [messageId, userId]
+        );
+
+        if (message.length === 0) {
+            return res.status(403).json({ message: 'Нет прав на удаление этого сообщения' });
+        }
+
+        await db.query('DELETE FROM messages WHERE id = ?', [messageId]);
+
+        // Уведомляем клиентов об удалении сообщения
+        notifyClients({
+            type: 'DELETE_MESSAGE',
+            data: {
+                messageId: parseInt(messageId),
+                chatId: message[0].chat_id
+            }
+        });
+
+        res.status(200).json({ message: 'Сообщение удалено' });
+    } catch (error) {
+        console.error('Ошибка при удалении сообщения:', error);
+        res.status(500).json({ message: 'Ошибка при удалении сообщения' });
+    }
+});
+
+// Очистка чата
+app.delete('/chats/:chatId/messages', verifyToken, async (req, res) => {
+    const { chatId } = req.params;
+    const userId = req.user.id;
+
+    try {
+        // Проверяем, что пользователь является участником чата
+        const [chat] = await db.query(
+            'SELECT * FROM chats WHERE id = ? AND (user_id_1 = ? OR user_id_2 = ?)',
+            [chatId, userId, userId]
+        );
+
+        if (chat.length === 0) {
+            return res.status(403).json({ message: 'Нет прав на очистку этого чата' });
+        }
+
+        await db.query('DELETE FROM messages WHERE chat_id = ?', [chatId]);
+
+        // Уведомляем клиентов об очистке чата
+        notifyClients({
+            type: 'CLEAR_CHAT',
+            data: { chatId: parseInt(chatId) }
+        });
+
+        res.status(200).json({ message: 'Чат очищен' });
+    } catch (error) {
+        console.error('Ошибка при очистке чата:', error);
+        res.status(500).json({ message: 'Ошибка при очистке чата' });
+    }
+});
+
+// Добавление загрузки файлов
+// Эндпоинт для загрузки файлов в чат
+app.post('/messages/upload', verifyToken, upload.single('file'), async (req, res) => {
+    const { chatId } = req.body;
+    const userId = req.user.id;
+    const file = req.file;
+
+    if (!chatId || !file) {
+        return res.status(400).json({ message: 'chatId или файл отсутствует' });
+    }
+
+    try {
+        // Добавляем информацию о файле в базу данных
+        const [result] = await db.query(
+            'INSERT INTO messages (chat_id, user_id, message, file_name, file_path, file_type, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+            [chatId, userId, '', file.originalname, file.path, file.mimetype]
+        );
+
+        const [user] = await db.query('SELECT username FROM users WHERE id = ?', [userId]);
+
+        const newMessage = {
+            id: result.insertId,
+            chat_id: parseInt(chatId),
+            user_id: userId,
+            message: '',
+            username: user[0].username,
+            file_name: file.originalname,
+            file_path: `/uploads/chat_files/${path.basename(file.path)}`,
+            file_type: file.mimetype,
+            created_at: new Date(),
+            read: false,
+        };
+
+        notifyClients({ type: 'NEW_MESSAGE', data: newMessage });
+
+        res.status(201).json(newMessage);
+    } catch (error) {
+        console.error('Ошибка при загрузке файла:', error);
+        res.status(500).json({ message: 'Ошибка при загрузке файла' });
+    }
+});
+
+// Статическая подача файлов из папки uploads
+app.use('/uploads/chats/media', express.static(path.join(__dirname, 'uploads')));
