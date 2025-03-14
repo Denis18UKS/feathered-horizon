@@ -85,8 +85,9 @@ const Users: React.FC = () => {
         return matchesSearch && matchesSkillsFilter;
     });
 
+    // Навигация на страницу профиля пользователя
     const openProfile = (username: string) => {
-        navigate(`/users/${username}`);
+        navigate(`/users-profiles/${username}`);
     };
 
     const addFriend = async (userId: number) => {
@@ -147,7 +148,7 @@ const Users: React.FC = () => {
                 {/* Toggle button для фильтрации */}
                 <label className="inline-flex items-center cursor-pointer">
                     <span className="mr-2">
-                        {filterNoSkills ? "Без навыков" : "С навыками"}
+                        {filterNoSkills ? "Только с навыками" : "Все пользователи"}
                     </span>
                     <div
                         onClick={() => setFilterNoSkills(!filterNoSkills)}
