@@ -79,16 +79,19 @@ export default function AdminUsers() {
   };
 
   const handleDeleteUser = async (userId: string) => {
-    try {
-      await fetch(`http://localhost:5000/admin/users/${userId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      fetchUsers();
-    } catch (error) {
-      console.error("Error deleting user:", error);
+    const confirmDelete = window.confirm("Вы уверены, что хотите удалить данного пользователя?");
+    if (confirmDelete) {
+      try {
+        await fetch(`http://localhost:5000/users/${userId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        fetchUsers();
+      } catch (error) {
+        console.error("Error deleting user:", error);
+      }
     }
   };
 
