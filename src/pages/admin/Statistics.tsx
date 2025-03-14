@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useEffect, useState } from "react"; 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Line } from "react-chartjs-2";
 import {
@@ -14,6 +13,7 @@ import {
 } from 'chart.js';
 import { useIsMobile } from "@/hooks/use-mobile";
 
+// Регистрация необходимых компонентов Chart.js
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -26,20 +26,72 @@ ChartJS.register(
 
 const Statistics = () => {
   const isMobile = useIsMobile();
+  const [stats, setStats] = useState({
+    newUsers: [],  // Данные для графика
+    labels: [],    // Метки для оси X
+    totalUsers: 1234
+  });
 
-  // Моковые данные для графика
+  const [filter, setFilter] = useState("day");  // Хук состояния для фильтра
+  const [monthFilter, setMonthFilter] = useState("2024-12");  // Хук для фильтра по месяцу
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/admin/statistics?filter=${filter}&month=${monthFilter}`, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setStats({
+            newUsers: data.newUsers,  // Обновляем данные для графика
+            labels: data.labels,      // Обновляем метки
+            totalUsers: data.totalUsers,
+          });
+        } else {
+          console.error("Ошибка при получении статистики.");
+        }
+      } catch (error) {
+        console.error("Ошибка при запросе статистики:", error);
+      }
+    };
+
+    fetchStats();
+  }, [filter, monthFilter]);  // Повторный запрос при изменении фильтра или месяца
+
+  const formatDateForFilter = (dateString, filter) => {
+    const date = new Date(dateString);
+    switch (filter) {
+      case 'day':
+        return date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'numeric', day: 'numeric' });
+      case 'month':
+        return date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'long' });
+      default:
+        return date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'numeric', day: 'numeric' });
+    }
+  };
+
+  const filterValidLabels = (labels) => {
+    return labels.filter(label => {
+      const date = new Date(label);
+      const monthYear = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+      return monthYear >= "2024-12" && monthYear <= "2025-03";  // Отфильтровываем по датам с декабря 2024 по март 2025
+    });
+  };
+
   const data = {
-    labels: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь'].map(
-      month => isMobile ? month.slice(0, 3) : month
-    ),
+    labels: filterValidLabels(stats.labels).map((label) => formatDateForFilter(label, filter)),
     datasets: [
       {
         label: 'Новые пользователи',
-        data: [12, 19, 3, 5, 2, 3],
+        data: stats.newUsers,
         borderColor: 'rgb(75, 192, 192)',
-        tension: 0.1
-      }
-    ]
+        tension: 0.1,
+      },
+    ],
   };
 
   const options = {
@@ -47,43 +99,69 @@ const Statistics = () => {
     maintainAspectRatio: true,
     plugins: {
       legend: {
-        position: 'top' as const,
+        position: 'top' as const,  // Указываем явный тип, который ожидает Chart.js
         labels: {
           font: {
-            size: isMobile ? 12 : 14
-          }
-        }
+            size: isMobile ? 12 : 14,
+          },
+        },
       },
       title: {
         display: true,
         text: 'Статистика роста пользователей',
         font: {
-          size: isMobile ? 14 : 16
-        }
-      }
+          size: isMobile ? 14 : 16,
+        },
+      },
     },
     scales: {
       y: {
         beginAtZero: true,
         ticks: {
           font: {
-            size: isMobile ? 10 : 12
-          }
-        }
+            size: isMobile ? 10 : 12,
+          },
+        },
       },
       x: {
         ticks: {
           font: {
-            size: isMobile ? 10 : 12
-          }
-        }
-      }
-    }
+            size: isMobile ? 10 : 12,
+          },
+          autoSkip: true, // Для предотвращения наложения меток
+        },
+      },
+    },
   };
 
   return (
     <div className="container mx-auto py-4 md:py-8 px-2 md:px-4">
       <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Статистика</h1>
+      
+      <div className="mb-4">
+        <select 
+          value={filter} 
+          onChange={(e) => setFilter(e.target.value)} 
+          className="border px-4 py-2 rounded-md"
+        >
+          <option value="day">По дням</option>
+          <option value="month">По месяцам</option>
+        </select>
+      </div>
+
+      <div className="mb-4">
+        <select 
+          value={monthFilter} 
+          onChange={(e) => setMonthFilter(e.target.value)} 
+          className="border px-4 py-2 rounded-md"
+        >
+          <option value="2024-12">Декабрь 2024</option>
+          <option value="2025-01">Январь 2025</option>
+          <option value="2025-02">Февраль 2025</option>
+          <option value="2025-03">Март 2025</option>
+        </select>
+      </div>
+
       <div className="grid gap-4 md:gap-6">
         <Card className="w-full overflow-hidden">
           <CardHeader>
@@ -96,34 +174,14 @@ const Statistics = () => {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg">Всего пользователей</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl md:text-4xl font-bold">1,234</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg">Активных сегодня</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl md:text-4xl font-bold">156</p>
-            </CardContent>
-          </Card>
-
-          <Card className="sm:col-span-2 md:col-span-1">
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg">Новых за неделю</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl md:text-4xl font-bold">45</p>
-            </CardContent>
-          </Card>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg">Всего пользователей</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl md:text-4xl font-bold">{stats.totalUsers}</p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
