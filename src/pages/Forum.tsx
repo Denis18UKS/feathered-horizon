@@ -24,18 +24,18 @@ const Forum = () => {
 
     // Получаем userId напрямую из хранилища или декодируем из токена
     let userId = localStorage.getItem('userId');
-    
+
     // Функция для декодирования токена и получения userId
     const getUserIdFromToken = () => {
         if (!token) return null;
-        
+
         try {
             const base64Url = token.split('.')[1];
             const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
                 return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
             }).join(''));
-            
+
             const decoded = JSON.parse(jsonPayload);
             return decoded.id ? decoded.id.toString() : null;
         } catch (error) {
@@ -43,7 +43,7 @@ const Forum = () => {
             return null;
         }
     };
-    
+
     // Если userId не найден в localStorage, пытаемся получить его из токена
     if (!userId && token) {
         userId = getUserIdFromToken();
@@ -51,9 +51,9 @@ const Forum = () => {
             localStorage.setItem('userId', userId);
         }
     }
-    
+
     const navigate = useNavigate();
-    
+
     // Загрузка вопросов с сервера
     const fetchQuestions = async () => {
         try {
@@ -132,10 +132,10 @@ const Forum = () => {
             });
         } catch (error) {
             console.error('Ошибка при добавлении вопроса:', error);
-            toast({ 
-                title: "Ошибка", 
-                description: error.message || "Не удалось создать вопрос", 
-                variant: "destructive" 
+            toast({
+                title: "Ошибка",
+                description: error.message || "Не удалось создать вопрос",
+                variant: "destructive"
             });
         }
     };
@@ -153,12 +153,13 @@ const Forum = () => {
         }
 
         try {
-            const response = await fetch(`http://localhost:5000/forums/${questionId}/close`, {
+            const response = await fetch(`http://localhost:5000/forums/${questionId}/status`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
                 },
+                body: JSON.stringify({ status: 'решён' }),
             });
 
             if (!response.ok) {
@@ -166,10 +167,10 @@ const Forum = () => {
                 throw new Error(errorData.message || `Ошибка HTTP: ${response.status}`);
             }
 
-            setQuestions(prev => 
-                prev.map(q => 
-                    q.id === questionId 
-                        ? { ...q, status: 'решён' } 
+            setQuestions(prev =>
+                prev.map(q =>
+                    q.id === questionId
+                        ? { ...q, status: 'решён' }
                         : q
                 )
             );
@@ -180,10 +181,10 @@ const Forum = () => {
             });
         } catch (error) {
             console.error('Ошибка при закрытии вопроса:', error);
-            toast({ 
-                title: "Ошибка", 
-                description: error.message || "Не удалось закрыть вопрос", 
-                variant: "destructive" 
+            toast({
+                title: "Ошибка",
+                description: error.message || "Не удалось закрыть вопрос",
+                variant: "destructive"
             });
         }
     };
@@ -264,10 +265,10 @@ const Forum = () => {
             });
         } catch (error) {
             console.error('Ошибка при добавлении ответа:', error);
-            toast({ 
-                title: "Ошибка", 
-                description: error.message || "Не удалось добавить ответ", 
-                variant: "destructive" 
+            toast({
+                title: "Ошибка",
+                description: error.message || "Не удалось добавить ответ",
+                variant: "destructive"
             });
         }
     };
@@ -304,18 +305,12 @@ const Forum = () => {
                                         Посмотреть ответы
                                     </Button>
                                     {q.status !== 'решён' && (
-                                        isQuestionAuthor(q.user_id) ? (
-                                            <Button 
-                                                variant="outline"
-                                                onClick={() => handleCloseQuestion(q.id)}
-                                            >
-                                                Закрыть вопрос
-                                            </Button>
-                                        ) : (
-                                            <Button onClick={() => { setSelectedQuestion(q.id); setShowAddAnswerModal(true); }}>
-                                                Ответить
-                                            </Button>
-                                        )
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => handleCloseQuestion(q.id)}
+                                        >
+                                            Закрыть вопрос
+                                        </Button>
                                     )}
                                 </CardFooter>
                             </Card>

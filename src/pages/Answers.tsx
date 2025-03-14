@@ -7,7 +7,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useParams } from 'react-router-dom';
 
 const Answers = () => {
-    const { id } = useParams<{ id: string }>(); // Получаем ID вопроса из URL
+    const { id } = useParams<{ id: string }>(); // ID вопроса из URL
     const [answers, setAnswers] = useState([]);
     const [newAnswer, setNewAnswer] = useState('');
     const [showAddAnswerModal, setShowAddAnswerModal] = useState(false);
@@ -45,6 +45,8 @@ const Answers = () => {
             return;
         }
 
+        const username = localStorage.getItem('username');
+
         try {
             const response = await fetch(`http://localhost:5000/forums/${id}/answers`, {
                 method: 'POST',
@@ -61,7 +63,8 @@ const Answers = () => {
             if (!response.ok) throw new Error(`Ошибка HTTP: ${response.status}`);
 
             const newAnswerFromDB = await response.json();
-            setAnswers((prev) => [...prev, newAnswerFromDB]);
+
+            setAnswers((prev) => [...prev, { ...newAnswerFromDB, user: newAnswerFromDB.user || username || "Неизвестный" }]); // Обновляем сразу с автором
             setNewAnswer('');
             setShowAddAnswerModal(false);
         } catch (error) {

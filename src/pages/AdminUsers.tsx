@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   Table,
@@ -23,10 +22,7 @@ interface User {
   id: string;
   username: string;
   email: string;
-  ip_address: string;
-  location: string;
-  created_at: string;
-  last_login: string;
+  isBlocked: "активен" | "заблокирован"; // Добавим это поле
 }
 
 export default function AdminUsers() {
@@ -35,24 +31,69 @@ export default function AdminUsers() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("http://localhost:5000/admin/users", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setUsers(data);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
+
+  const handleBlockUser = async (userId: string) => {
+    try {
+      await fetch(`http://localhost:5000/users/${userId}/block`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error("Error blocking user:", error);
+    }
+  };
+
+  const handleUnBlockUser = async (userId: string) => {
+    try {
+      await fetch(`http://localhost:5000/users/${userId}/unblock`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      fetchUsers();
+    } catch (error) {
+      console.error("Error unblocking user:", error);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    const confirmDelete = window.confirm("Вы уверены, что хотите удалить данного пользователя?");
+    if (confirmDelete) {
       try {
-        const response = await fetch("http://localhost:5000/admin/users", {
+        await fetch(`http://localhost:5000/users/${userId}`, {
+          method: "DELETE",
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
         });
-        if (response.ok) {
-          const data = await response.json();
-          setUsers(data);
-        }
+        fetchUsers();
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error deleting user:", error);
       }
-    };
-
-    fetchUsers();
-  }, []);
+    }
+  };
 
   const columns = [
     {
@@ -63,24 +104,38 @@ export default function AdminUsers() {
       accessorKey: "email",
       header: "Email",
     },
-    ...(!isMobile ? [
-      {
-        accessorKey: "ip_address",
-        header: "IP адрес",
-      },
-      {
-        accessorKey: "location",
-        header: "Местоположение",
-      },
-      {
-        accessorKey: "created_at",
-        header: "Дата регистрации",
-      },
-      {
-        accessorKey: "last_login",
-        header: "Последний вход",
-      },
-    ] : []),
+    {
+      accessorKey: "actions",
+      header: "Действия",
+      cell: ({ row }: { row: { original: User } }) => (
+        <div className="flex space-x-2">
+          {row.original.isBlocked === "активен" ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => handleBlockUser(row.original.id)}
+            >
+              Заблокировать
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="bg-green-500 text-white hover:bg-green-600" // Зеленая кнопка для "Разблокировать"
+              onClick={() => handleUnBlockUser(row.original.id)}
+            >
+              Разблокировать
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="destructive"
+            onClick={() => handleDeleteUser(row.original.id)}
+          >
+            Удалить
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   const table = useReactTable({
