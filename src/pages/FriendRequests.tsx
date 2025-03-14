@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,6 @@ interface FriendRequest {
     created_at: string;
     friend: {
         username: string;
-        avatar: string | null;
     };
 }
 
@@ -36,7 +34,7 @@ const FriendRequests = () => {
             }
 
             try {
-                const decodedToken = JSON.parse(atob(token.split('.')[1])); // Декодируем JWT
+                const decodedToken = JSON.parse(atob(token.split('.')[1]));
                 console.log("Ваш user_id:", decodedToken.id);
                 const currentUserId = decodedToken.id;
 
@@ -45,7 +43,6 @@ const FriendRequests = () => {
                 });
 
                 if (response.status === 500) {
-                    // Специальная обработка для ошибки 500 (отсутствие таблицы в БД)
                     setError("Функция друзей временно недоступна. Обратитесь к администратору.");
                     setIsLoading(false);
                     return;
@@ -60,9 +57,8 @@ const FriendRequests = () => {
                     throw new Error("Неверная структура данных");
                 }
 
-                // Формируем список заявок и отфильтровываем свой аккаунт
                 const formattedRequests = data
-                    .filter(req => req.user_id !== currentUserId) // Исключаем заявки от себя к себе
+                    .filter(req => req.user_id !== currentUserId)
                     .map((req, index) => ({
                         id: index,
                         user_id: req.user_id,
@@ -70,8 +66,7 @@ const FriendRequests = () => {
                         status: req.status,
                         created_at: req.created_at || "",
                         friend: {
-                            username: req.user_name || req.friend_name, // Используем имя отправителя
-                            avatar: req.avatar || null,
+                            username: req.user_name || req.friend_name,
                         },
                     }));
 
@@ -104,7 +99,6 @@ const FriendRequests = () => {
 
             if (!response.ok) throw new Error(`Ошибка принятия: ${response.status}`);
 
-            // Обновляем локальное состояние без перезагрузки страницы
             setFriendRequests(prev => prev.filter(req => req.user_id !== friendId));
             toast({
                 title: "Заявка принята",
@@ -133,7 +127,6 @@ const FriendRequests = () => {
 
             if (!response.ok) throw new Error(`Ошибка отклонения: ${response.status}`);
 
-            // Обновляем локальное состояние без перезагрузки страницы
             setFriendRequests(prev => prev.filter(req => req.user_id !== friendId));
             toast({
                 title: "Заявка отклонена",
@@ -154,36 +147,6 @@ const FriendRequests = () => {
         navigate("/profile");
     };
 
-    if (isLoading) {
-        return (
-            <div className="container mx-auto px-4 py-8 flex justify-center items-center h-64">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Загрузка заявок...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="container mx-auto px-4 py-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Заявки в друзья</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col items-center text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                            <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-                            <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
-                            <Button onClick={goBackToProfile}>Назад в профиль</Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
     return (
         <div className="container mx-auto px-4 py-8 space-y-8">
             <Card>
@@ -197,14 +160,7 @@ const FriendRequests = () => {
                         <ul className="space-y-4">
                             {friendRequests.map((request) => (
                                 <li key={request.id} className="flex items-center justify-between border-b pb-2">
-                                    <div className="flex items-center space-x-4">
-                                        <img
-                                            src={request.friend.avatar ? `http://localhost:5000${request.friend.avatar}` : "/placeholder.svg"}
-                                            alt={request.friend.username}
-                                            className="w-12 h-12 rounded-full object-cover border border-gray-300"
-                                        />
-                                        <span>{request.friend.username}</span>
-                                    </div>
+                                    <span>{request.friend.username}</span>
                                     <div className="flex space-x-2">
                                         <Button size="sm" variant="default" onClick={() => handleAcceptRequest(request.user_id)}>
                                             Принять
