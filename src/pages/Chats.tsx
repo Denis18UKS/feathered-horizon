@@ -272,12 +272,9 @@ const Chats = () => {
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString("ru-RU", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-        });
+        return format(new Date(dateString), "d MMMM yyyy HH:mm", { locale: ru });
     };
+
 
 
     if (!currentUser) return <div>Загрузка...</div>;
@@ -338,7 +335,10 @@ const Chats = () => {
                                 >
                                     <div className="text-sm text-gray-500">{message.username}</div>
                                     <div className="break-all">{message.message}</div>
-                                    <div className="text-xs text-gray-500 mt-1">{formatDate(message.created_at)}</div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                        {formatDate(message.created_at)}
+                                    </div>
+
                                 </div>
                             ))}
 
