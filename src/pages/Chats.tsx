@@ -208,10 +208,12 @@ const Chats = () => {
             formData.append('media', mediaFile);
 
             try {
-                const response = await fetch(`http://localhost:5000/messages`, {
+                const response = await fetch(`http://localhost:5000/messages/upload`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+
                     },
                     body: formData
                 });
@@ -272,8 +274,10 @@ const Chats = () => {
     };
 
     const formatDate = (dateString: string) => {
-        return format(new Date(dateString), "d MMMM yyyy HH:mm", { locale: ru });
+        const date = new Date(dateString);
+        return format(date, "d MMMM yyyy HH:mm", { locale: ru });
     };
+    
 
 
 
