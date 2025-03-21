@@ -8,13 +8,21 @@ interface Hackathon {
     title: string;
     description: string;
     image: string;
-    link: string; // Добавлено поле ссылки на страницу хакатона
+    link: string;
 }
 
 const HackathonsPage: React.FC = () => {
     const [hackathons, setHackathons] = useState<Hackathon[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [progress, setProgress] = useState(0);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setProgress((prev) => (prev < 90 ? prev + 2 : prev));
+        }, 500);
+        return () => clearInterval(interval);
+    }, []);
 
     const fetchHackathons = async () => {
         try {
@@ -42,7 +50,7 @@ const HackathonsPage: React.FC = () => {
                     image: imageEl?.style.backgroundImage
                         ? imageEl.style.backgroundImage.slice(5, -2)
                         : "",
-                    link: linkEl ? linkEl.href : "#" // Добавляем ссылку
+                    link: linkEl ? linkEl.href : "#"
                 };
             });
     
@@ -52,6 +60,7 @@ const HackathonsPage: React.FC = () => {
             console.error("Ошибка парсинга:", err);
         } finally {
             setLoading(false);
+            setProgress(100);
         }
     };
 
@@ -61,14 +70,15 @@ const HackathonsPage: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="loading-container">
-                <div className="spinner"></div>
+            <div className="flex flex-col justify-center items-center h-screen">
+                <div className="w-16 h-16 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+                <p className="mt-4 text-lg font-semibold">Загрузка... {progress}%</p>
             </div>
         );
     }
 
     if (error) {
-        return <p>{error}</p>;
+        return <p className="text-red-500 text-center mt-4">{error}</p>;
     }
 
     return (
