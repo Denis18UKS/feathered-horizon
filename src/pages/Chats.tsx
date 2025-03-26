@@ -10,6 +10,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { LiquidButton } from "@/components/ui/liquid-button";
+import {
+    FileIcon,
+    FileImageIcon,
+    FileVideoIcon,
+    FileAudioIcon,
+    FileTextIcon,
+    FileArchiveIcon,
+    FileCheckIcon
+} from 'lucide-react';
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -28,8 +37,12 @@ interface Message {
     created_at: string;
     username: string;
     read: boolean;
-    media?: string; // Добавлено для медиафайлов
+    media?: string;
+    file_name?: string; // добавь это
+    file_path?: string; // и это
+    file_size?: string;
 }
+
 
 
 interface DecodedToken {
@@ -275,7 +288,7 @@ const Chats = () => {
         const date = new Date(dateString);
         return format(date, "d MMMM yyyy HH:mm", { locale: ru });
     };
-    
+
 
 
 
@@ -324,27 +337,135 @@ const Chats = () => {
                             <CardTitle>{selectedUser ? selectedUser.username : 'Выберите чат'}</CardTitle>
                         </CardHeader>
                         <CardContent className="h-[500px] overflow-y-auto space-y-4">
-                            {messages.map(message => (
-                                <div
-                                    key={message.id}
-                                    onContextMenu={(e) => {
-                                        e.preventDefault();
-                                        if (message.user_id === currentUser?.id) {
-                                            deleteMessage(message.id);
-                                        }
-                                    }}
-                                    className={`w-full mb-4 rounded-lg p-3 ${message.user_id === currentUser?.id ? 'bg-blue-100 ml-auto text-right' : 'bg-gray-100 mr-auto text-left'}`}
-                                >
-                                    <div className="text-sm text-gray-500">{message.username}</div>
-                                    <div className="break-all">{message.message}</div>
-                                    <div className="text-xs text-gray-500 mt-1">
-                                        {formatDate(message.created_at)}
+                            <div className="space-y-4 mt-4">
+                                {messages.map((msg) => (
+                                    <div key={msg.id} className={`p-3 rounded-lg shadow-md max-w-[80%] ${msg.user_id === currentUser?.id ? 'ml-auto bg-blue-100' : 'mr-auto bg-gray-100'}`}>
+                                        <div className="text-sm text-gray-600">{msg.username}</div>
+                                        {msg.message && <div className="text-base text-black mt-1">{msg.message}</div>}
+
+                                        {/* 🔽 Умный рендер медиафайлов с иконками, размером и именем */}
+                                        {msg.media && (() => {
+                                            const mediaUrl = `http://localhost:5000${msg.media}`;
+                                            const ext = msg.media.split('.').pop().toLowerCase();
+
+                                            const fileIcons = {
+                                                image: <FileImageIcon className="inline w-5 h-5 mr-1 text-blue-400" />,
+                                                video: <FileVideoIcon className="inline w-5 h-5 mr-1 text-purple-400" />,
+                                                audio: <FileAudioIcon className="inline w-5 h-5 mr-1 text-green-400" />,
+                                                pdf: <FileTextIcon className="inline w-5 h-5 mr-1 text-red-500" />,
+                                                archive: <FileArchiveIcon className="inline w-5 h-5 mr-1 text-yellow-600" />,
+                                                default: <FileIcon className="inline w-5 h-5 mr-1 text-gray-500" />,
+                                            };
+
+                                            const renderDownload = (icon, label, size) => (
+                                                <div className="mt-2 text-sm flex items-center gap-1">
+                                                    {icon}
+                                                    <a
+                                                        href={mediaUrl}
+                                                        download
+                                                        className="text-blue-600 hover:underline"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                    >
+                                                        {label || 'Скачать файл'}
+                                                    </a>
+                                                    {size && <span className="ml-2 text-xs text-gray-500">({size})</span>}
+                                                </div>
+                                            );
+
+                                            const formatSize = (size) => {
+                                                if (size < 1024) return `${size} B`;
+                                                if (size < 1048576) return `${(size / 1024).toFixed(1)} KB`;
+                                                if (size < 1073741824) return `${(size / 1048576).toFixed(1)} MB`;
+                                                return `${(size / 1073741824).toFixed(1)} GB`;
+                                            };
+
+                                            // Здесь должен быть размер файла, если он доступен
+                                            const fileSize = msg.file_size ? formatSize(msg.file_size) : null;
+
+                                            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                                                return (
+                                                    <div className="mt-2">
+                                                        <img src={mediaUrl} alt="Изображение" className="max-w-full rounded" />
+                                                        {renderDownload(fileIcons.image, 'Скачать изображение', fileSize)}
+                                                    </div>
+                                                );
+                                            }
+
+                                            if (['mp4', 'webm', 'ogg'].includes(ext)) {
+                                                return (
+                                                    <div className="mt-2">
+                                                        <video controls className="max-w-full rounded">
+                                                            <source src={mediaUrl} type={`video/${ext}`} />
+                                                            Видео не поддерживается
+                                                        </video>
+                                                        {renderDownload(fileIcons.video, 'Скачать видео', fileSize)}
+                                                    </div>
+                                                );
+                                            }
+
+                                            if (['mp3', 'wav', 'ogg'].includes(ext)) {
+                                                return (
+                                                    <div className="mt-2">
+                                                        <audio controls className="w-full">
+                                                            <source src={mediaUrl} type={`audio/${ext}`} />
+                                                            Аудио не поддерживается
+                                                        </audio>
+                                                        {renderDownload(fileIcons.audio, 'Скачать аудио', fileSize)}
+                                                    </div>
+                                                );
+                                            }
+
+                                            if (ext === 'pdf') {
+                                                return (
+                                                    <div className="mt-2">
+                                                        <iframe
+                                                            src={mediaUrl}
+                                                            title="PDF-файл"
+                                                            className="w-full h-64 rounded border"
+                                                        ></iframe>
+                                                        {renderDownload(fileIcons.pdf, 'Скачать PDF', fileSize)}
+                                                    </div>
+                                                );
+                                            }
+
+                                            if (['zip', 'rar', '7z'].includes(ext)) {
+                                                return renderDownload(fileIcons.archive, msg.file_name || 'Скачать архив', fileSize);
+                                            }
+
+                                            // Остальные форматы
+                                            return renderDownload(fileIcons.default, msg.file_name || 'Скачать файл', fileSize);
+                                        })()}
+
+                                        {/* 🔽 Кнопка для скачивания файла, если есть файл */}
+                                        {'file_path' in msg && msg.file_path && (
+                                            <div className="mt-2">
+                                                <a
+                                                    href={`http://localhost:5000${msg.file_path}`}
+                                                    download={msg.file_name || 'file'}
+                                                    className="text-blue-600 hover:underline text-sm"
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                >
+                                                    📎 Скачать файл: {msg.file_name}
+                                                </a>
+                                            </div>
+                                        )}
+
+                                        <div className="text-xs text-gray-500 mt-2">{formatDate(msg.created_at)}</div>
+                                        {msg.user_id === currentUser?.id && (
+                                            <button
+                                                onClick={() => deleteMessage(msg.id)}
+                                                className="text-xs text-red-500 hover:underline mt-1"
+                                            >
+                                                Удалить
+                                            </button>
+                                        )}
                                     </div>
+                                ))}
+                                <div ref={messagesEndRef} />
+                            </div>
 
-                                </div>
-                            ))}
-
-                            <div ref={messagesEndRef} />
                         </CardContent>
                         {selectedUser && (
                             <CardFooter className="flex items-center space-x-2">
